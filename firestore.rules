@@ -1,0 +1,108 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+
+    // --- Funciones de Ayuda (Helpers) ---
+    // Funciones reutilizables para mantener las reglas limpias y legibles.
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Función isAdmin() definitiva:
+    // Un usuario es administrador si su documento en 'usuarios' tiene el permiso explícito.
+    // Se ha eliminado la comprobación de la colección /admin para simplificar.
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.permisos.admin == true;
+    }
+    
+    // El promotor es dueño de su reserva.
+    function isOwner(reserva) {
+      return request.auth.uid == reserva.data.PromotorUid;
+    }
+
+    
+
+    // --- Colección de Usuarios (/usuarios) ---
+    match /usuarios/{userId} {
+
+      // LEER: Un usuario puede leer su propio perfil. Un admin puede leer cualquier perfil.
+      allow read: if isSelf(userId) || isAdmin();
+
+      // CREAR: Un usuario solo puede crear su propio documento de perfil.
+      // Se valida que los campos iniciales sean los correctos para el flujo de registro.
+      allow create: if isSelf(userId) &&
+                      request.resource.data.keys().hasAll(['uid', 'correo', 'rol', 'estado', 'fechaRegistro', 'permisos']) &&
+                      request.resource.data.uid == request.auth.uid &&
+                      request.resource.data.estado == 'Pendiente';
+
+      // ACTUALIZAR: Un usuario puede actualizar su propio perfil (p. ej., para añadir el nombre).
+      // Un admin también puede actualizar cualquier perfil.
+      allow update: if isSelf(userId) || isAdmin();
+
+      // BORRAR: Solo los administradores pueden borrar perfiles de usuario.
+      allow delete: if isAdmin();
+    }
+
+    // --- Colección de Clubs (/clubs) ---
+    match /clubs/{clubId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin(); // Solo admin crea/edita/borra clubs
+    }
+
+    // --- Colección de Días de la Semana (/WeekDays) ---
+    match /WeekDays/{day} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin(); // Solo admin puede modificar los días
+    }
+
+    // --- Colecciones de Reservas ---
+
+    // /reservas (master)
+    match /reservas/{resId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(request.resource);
+      allow update, delete: if isAdmin();
+    }
+
+    // /reservas_por_dia/{dia}/reservas/{resId}
+    match /reservas_por_dia/{dia}/reservas/{resId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(request.resource);
+      allow update, delete: if isAdmin();
+    }
+
+    // /reservas_por_promotor/{promotorId}/reservas/{resId}
+    match /reservas_por_promotor/{promotorId}/reservas/{resId} {
+      // Un promotor puede leer sus propias reservas, un admin puede leer todas.
+      allow read: if isSelf(promotorId) || isAdmin();
+      // Un promotor solo puede crear/modificar/borrar sus propias reservas.
+      allow write: if isSelf(promotorId);
+    }
+
+    // --- Otras Colecciones ---
+
+    // /solicitudes_modificacion/{idSol}
+    match /solicitudes_modificacion/{idSol} {
+      allow create: if isSignedIn();
+      // El promotor objetivo o un admin pueden leer la solicitud.
+      allow read: if isSignedIn() && (isSelf(request.resource.data.targetPromotorUid) || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    // /formulario_config/{doc}
+    match /formulario_config/{doc} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

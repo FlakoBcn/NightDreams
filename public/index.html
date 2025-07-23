@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<!-- Tipografía - solo cuando se necesita -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+ 
+
+  <!-- Iconos Lucide - carga bajo demanda -->
+  <script>
+    // Cargar Lucide solo cuando sea necesario
+    function loadLucide() {
+      if (!window.lucide) {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/lucide@latest/dist/umd/lucide.js';
+        script.onload = () => lucide.createIcons();
+        document.head.appendChild(script);
+      }
+    }
+  </script>
+
+  <!-- Firebase SDK - carga bajo demanda -->
+  <script>
+    // Cargar Firebase solo cuando se necesite autenticación
+    let firebaseLoaded = false;
+    function loadFirebase() {
+      if (firebaseLoaded) return Promise.resolve();
+      
+      firebaseLoaded = true;
+      console.log('📦 Cargando Firebase bajo demanda...');
+      
+      return Promise.all([
+        loadScript('https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js'),
+        loadScript('https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js'),
+        loadScript('https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js'),
+        loadScript('https://www.gstatic.com/firebasejs/10.12.1/firebase-messaging-compat.js')
+      ]);
+    }
+    
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+  </script>
+
+  <!-- App principal - carga inmediatamente -->
+  <script type="module" src="scripts/app.js"></script>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store">
+  <title>NightDreams</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+
+  <!-- Estilos principales -->
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+
+  <!-- Tipografía -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400&display=swap" rel="stylesheet">
+
+  <!-- Iconos Lucide -->
+  <script defer src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Firebase SDK (Compat, una sola vez) -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.1/firebase-messaging-compat.js"></script>
+
+  <!-- Lógica principal (ES module) -->
+  <script type="module" defer src="scripts/app.js"></script>
+
+  <style>
+    /* CSS crítico inline - solo lo esencial */
+    .logo-font{font-family:Arial,sans-serif;letter-spacing:.1em}
+    
+    /* Loading básico */
+    .loading { opacity: 0.6; }
+    
+    /* Offline banner */
+    .offline-banner {
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      right: 0; 
+      background: #ff4444; 
+      color: white; 
+      text-align: center; 
+      padding: 8px; 
+      z-index: 9999;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    /* Overlay y sidebar - minificado */
+    #overlay{opacity:0;pointer-events:none;transition:opacity .3s}
+    #sideMenuWrapper.active #overlay{opacity:.4;pointer-events:auto}
+    #sideMenu{display:flex;flex-direction:column;height:100%}
+    .mt-auto{margin-top:auto!important}
+  </style>
+  
+  <!-- Fuentes se cargan cuando se necesiten -->
+  <script>
+    function loadOrbitronFont() {
+      const link = document.createElement('link');
+      link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400&display=swap';
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+      document.querySelectorAll('.logo-font').forEach(el => {
+        el.style.fontFamily = "'Orbitron', sans-serif";
+      });
+    }
+  </script>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+  <!-- HEADER -->
+  <header class="fixed top-0 left-0 w-full z-40 flex justify-between items-center px-4 py-3 bg-white shadow-md border-b">
+    <div class="flex items-center space-x-3">
+      <button id="menuBtn"><i data-lucide="menu"></i></button>
+      <img src="icon-192.png" class="w-12 h-12" alt="NightDreams logo">
+    </div>
+    <div class="flex items-center space-x-4">
+      <button id="guardarTokenBtn"><i data-lucide="send"></i></button>
+      <button id="notificacionesBtn"><i data-lucide="bell"></i></button>
+      <button id="refreshBtn"><i data-lucide="refresh-ccw"></i></button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <div id="sideMenuWrapper" class="fixed inset-0 z-50 hidden">
+    <div id="overlay" class="absolute inset-0 bg-black"></div>
+
+    <div id="sideMenu" class="absolute left-0 top-0 w-64 h-full bg-white shadow-lg transform -translate-x-full transition-transform duration-300 z-10">
+      <div class="p-4 flex items-center space-x-2">
+        <img src="icon-192.png" class="w-8 h-8">
+        <h1 class="text-base logo-font">NIGHT DREAMS</h1>
+      </div>
+
+      <div class="p-4">
+        <p id="userName" class="font-semibold"></p>
+        <p id="userEmail" class="text-sm text-gray-500"></p>
+        <p id="userRole" class="text-xs text-gray-400 italic"></p>
+      </div>
+
+      <div id="adminPanelBtnWrapper" class="p-4 hidden">
+        <button class="w-full bg-gray-800 text-white py-2 rounded mb-2" onclick="window.location.href='admin.html'">
+          ⚙️ Panel Admin
+        </button>
+      </div>
+
+      <div class="p-4">
+        <button id="clearCacheBtn" class="w-full py-2 bg-orange-500 text-white rounded">🧹 Limpiar Caché</button>
+      </div>
+
+      <div class="p-4 mt-auto">
+        <button id="logoutBtn" class="w-full py-2 bg-red-500 text-white rounded">Cerrar sesión</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENIDO SPA -->
+  <main id="content" class="p-4 pt-24 pb-28 mb-3"></main>
+
+  <!-- NAV INFERIOR -->
+  <nav class="fixed bottom-0 w-full bg-white shadow-inner border-t flex px-2 pb-8 pt-2">
+    <button data-page="home"       class="nav-btn flex-1 flex flex-col items-center py-2 text-xs text-gray-600 border-r">
+      <i data-lucide="star"></i><span>Inicio</span>
+    </button>
+    <button data-page="reservas"   class="nav-btn flex-1 flex flex-col items-center py-2 text-xs text-gray-600 border-r">
+      <i data-lucide="list"></i><span>Reservas</span>
+    </button>
+    <button data-page="formulario" class="nav-btn flex-1 flex flex-col items-center py-2 text-xs text-gray-600 border-r">
+      <i data-lucide="ticket"></i><span>Formulario</span>
+    </button>
+    <button data-page="devolver"   class="nav-btn flex-1 flex flex-col items-center py-2 text-xs text-gray-600 border-r">
+      <i data-lucide="wallet"></i><span>Devolver</span>
+    </button>
+    <button data-page="mesas"      class="nav-btn flex-1 flex flex-col items-center py-2 text-xs text-gray-600">
+      <i data-lucide="martini"></i><span>Mesas</span>
+    </button>
+  </nav>
+</body>
+</html>

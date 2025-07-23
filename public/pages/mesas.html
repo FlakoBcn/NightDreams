@@ -1,0 +1,31 @@
+<h2 class="text-xl font-bold mb-4">Gestión de Mesas</h2>
+
+<div class="flex flex-wrap gap-2 mb-4">
+  <input type="text" id="clienteMesa" placeholder="Cliente" class="border rounded px-2 py-1 w-24"/>
+  <input type="number" id="paxMesa" placeholder="PAX" class="border rounded px-2 py-1 w-16"/>
+  <input type="number" id="precioMesa" placeholder="Precio" class="border rounded px-2 py-1 w-20"/>
+  <input type="text" id="promotorMesa" placeholder="Promotor" class="border rounded px-2 py-1 w-24"/>
+  <input type="text" id="numMesa" placeholder="Mesa" class="border rounded px-2 py-1 w-16"/>
+  <button id="addMesaBtn" class="bg-gray-800 text-white px-4 py-1 rounded shadow">OK</button>
+  <button id="clearMesasBtn" class="bg-red-600 text-white px-4 py-1 rounded shadow">Limpiar</button>
+</div>
+
+<div class="mb-6">
+  <h3 class="font-semibold mb-2">En Cola</h3>
+  <ul id="listaEnCola" class="space-y-2"></ul>
+</div>
+
+<div class="mb-6">
+  <h3 class="font-semibold mb-2">Confirmadas</h3>
+  <ul id="listaConfirmadas" class="space-y-2"></ul>
+</div>
+
+<div>
+  <h3 class="font-semibold mb-2">Rechazadas</h3>
+  <ul id="listaRechazadas" class="space-y-2"></ul>
+</div>
+
+<!-- Script de lógica de mesas -->
+<script src="../scripts/mesas.js"></script>
+</div>
+

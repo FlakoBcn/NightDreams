@@ -1,0 +1,776 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Panel Admin - NightDreams</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .logo-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; font-weight: 500; }
+    .card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .status-badge { font-size: 0.75em; padding: 0.25em 0.5em; }
+    .user-actions { gap: 0.5rem; }
+    .admin-stats { background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); }
+    .token-display { font-family: 'Courier New', monospace; font-size: 0.8em; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; word-break: break-all; }
+    .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .modal-header .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+    .form-check-label small { font-size: 0.8em; }
+    .table th { background-color: #f8f9fa; font-weight: 600; }
+    .badge { font-size: 0.8em; }
+  </style>
+  
+  <!-- Cache busting para scripts -->
+  <script>
+    // Función para recargar scripts con nueva versión
+    function reloadScripts() {
+      const version = Date.now();
+      const scripts = document.querySelectorAll('script[src*="scripts/"], script[src*="js/"]');
+      scripts.forEach(script => {
+        const newScript = document.createElement('script');
+        const src = script.src.split('?')[0]; // Remover parámetros existentes
+        newScript.src = src + '?v=' + version;
+        script.parentNode.replaceChild(newScript, script);
+      });
+    } // <-- Cierra reloadScripts correctamente
+    
+    // Detectar Ctrl+F5 para forzar recarga de scripts
+    document.addEventListener('keydown', function(e) {
+      if (e.ctrlKey && e.key === 'F5') {
+        e.preventDefault();
+        reloadScripts();
+        location.reload();
+      }
+    });
+    
+    // Función para limpiar caché manualmente de toda la aplicación
+    async function limpiarCache() {
+      if (confirm('¿Limpiar caché COMPLETO de toda la aplicación y recargar?\n\nEsto limpiará:\n- Caché del navegador\n- Service Worker\n- LocalStorage (excepto datos de sesión)\n- Caché de scripts')) {
+        
+        try {
+          // 1. Limpiar Service Worker y sus cachés
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+              console.log('Eliminando Service Worker:', registration.scope);
+              await registration.unregister();
+            }
+          }
+          
+          // 2. Limpiar todas las cachés del navegador
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            for (const cacheName of cacheNames) {
+              console.log('Eliminando caché:', cacheName);
+              await caches.delete(cacheName);
+            }
+          }
+          
+          // 3. Preservar datos de sesión
+          const currentAuth = localStorage.getItem('currentAuth');
+          const userData = {
+            nombre: localStorage.getItem('nombre'),
+            correo: localStorage.getItem('correo'),
+            rol: localStorage.getItem('rol'),
+            estado: localStorage.getItem('estado'),
+            isAdmin: localStorage.getItem('isAdmin'),
+            permisos: localStorage.getItem('permisos')
+          };
+          
+          // 4. Limpiar todo el localStorage
+          localStorage.clear();
+          sessionStorage.clear();
+          
+          // 5. Restaurar datos de sesión
+          if (currentAuth) localStorage.setItem('currentAuth', currentAuth);
+          if (userData.nombre) localStorage.setItem('nombre', userData.nombre);
+          if (userData.correo) localStorage.setItem('correo', userData.correo);
+          if (userData.rol) localStorage.setItem('rol', userData.rol);
+          if (userData.estado) localStorage.setItem('estado', userData.estado);
+          if (userData.isAdmin) localStorage.setItem('isAdmin', userData.isAdmin);
+          if (userData.permisos) localStorage.setItem('permisos', userData.permisos);
+          
+          // 6. Limpiar variables globales de scripts
+          delete window.db;
+          delete window.messaging;
+          delete window.enCola;
+          delete window.confirmadas;
+          delete window.rechazadas;
+          delete window.currentFormData;
+          delete window.pageState;
+          delete window.formularioTimers;
+          delete window.homeTimers;
+          delete window.mesasTimers;
+          
+          // 7. Mensaje de éxito
+          alert('✅ Caché completo limpiado exitosamente!\n\nLa aplicación se recargará ahora.');
+          
+          // 8. Recargar página con caché completamente limpio
+          window.location.href = window.location.href + '?cache_cleared=' + Date.now();
+          
+        } catch (error) {
+          console.error('Error limpiando caché:', error);
+          alert('⚠️ Error al limpiar caché: ' + error.message + '\n\nSe recargará la página normalmente.');
+          
+          // Fallback: recarga normal
+          reloadScripts();
+          window.location.reload(true);
+        }
+      }
+    }
+    </script>
+</head>
+<body class="bg-light">
+  <!-- Header -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+      <a class="navbar-brand logo-font" href="index.html">
+        <i data-lucide="shield-check" class="me-2"></i>
+        NightDreams Admin
+      </a>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-warning btn-sm" onclick="limpiarCache()">
+          <i data-lucide="refresh-cw" class="me-1"></i>
+          Limpiar Caché
+        </button>
+        <button class="btn btn-outline-light btn-sm" onclick="window.location.href='index.html'">
+          <i data-lucide="arrow-left" class="me-1"></i>
+          Volver a App
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+
+    <!-- Panel Admin de Usuarios -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i data-lucide="key" class="me-2"></i>
+          🔔 Tu Token de Admin (Para notificaciones push)
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Token actual:</label>
+          <div id="adminTokenDisplay" class="token-display">
+            <span class="text-muted">Presiona el botón para obtener tu token...</span>
+          </div>
+        </div>
+        <button id="getTokenBtn" class="btn btn-primary me-2">
+          <i data-lucide="refresh-ccw" class="me-1"></i>
+          Obtener Token
+        </button>
+        <button id="copyTokenBtn" class="btn btn-outline-secondary">
+          <i data-lucide="copy" class="me-1"></i>
+          Copiar Token
+        </button>
+      </div>
+    </div>
+
+    <!-- Gestión de Clubs -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i data-lucide="building" class="me-2"></i>
+          Gestión de Clubs
+        </h5>
+      </div>
+      <div class="card-body">
+        <!-- Botón para agregar nuevo club -->
+        <div class="mb-3">
+          <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addClubModal">
+            <i data-lucide="plus" class="me-1"></i>
+            Agregar Nuevo Club
+          </button>
+        </div>
+        
+        <!-- Tabla de clubs -->
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+        <th>Nombre</th>
+        <th>Disponibilidad</th>
+        <th>Full Ticket</th>
+        <th>Pre-Sale</th>
+        <th>Estado</th>
+        <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="clubsTable">
+              <tr>
+                <td colspan="7" class="text-center">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando clubs...</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Agrega esto donde quieras mostrar la nueva tabla -->
+<div class="card mt-4">
+  <div class="card-header">
+    <h5 class="mb-0">
+      <i data-lucide="calendar-days" class="me-2"></i>
+      Week Schedule
+    </h5>
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Día</th>
+            <th>Clubs</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="weekScheduleTable">
+          <tr>
+            <td colspan="3" class="text-center">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando horarios...</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+    <!-- Gestión de Usuarios -->
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i data-lucide="users" class="me-2"></i>
+          Gestión de Usuarios
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Fecha Registro</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="usuariosTable">
+              <tr>
+                <td colspan="6" class="text-center">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando usuarios...</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para agregar nuevo club -->
+  <div class="modal fade" id="addClubModal" tabindex="-1" aria-labelledby="addClubModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addClubModalLabel">
+            <i data-lucide="plus-circle" class="me-2"></i>
+            Agregar Nuevo Club
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="addClubForm">
+            <div class="row">
+              <div class="col-md-12">
+                <div class="mb-3">
+                  <label for="clubNombre" class="form-label">Nombre del Club *</label>
+                  <input type="text" class="form-control" id="clubNombre" required>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="clubDisponibilidad" class="form-label">Disponibilidad *</label>
+              <select class="form-select" id="clubDisponibilidad" required>
+                <option value="">Seleccionar disponibilidad</option>
+                <option value="siempre">Siempre disponible</option>
+                <option value="lunes">Solo Lunes</option>
+                <option value="martes">Solo Martes</option>
+                <option value="miércoles">Solo Miércoles</option>
+                <option value="jueves">Solo Jueves</option>
+                <option value="viernes">Solo Viernes</option>
+                <option value="sábado">Solo Sábado</option>
+                <option value="domingo">Solo Domingo</option>
+                <option value="fin_semana">Fin de Semana (Viernes-Sábado)</option>
+                <option value="entre_semana">Entre Semana (Lunes-Jueves)</option>
+              </select>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="clubFullTicket">
+                    <label class="form-check-label" for="clubFullTicket">
+                      <strong>Full Ticket</strong>
+                      <br><small class="text-muted">Entrada completa sin pago adicional</small>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="clubPreSale">
+                    <label class="form-check-label" for="clubPreSale">
+                      <strong>Pre-Sale</strong>
+                      <br><small class="text-muted">Venta anticipada con descuento</small>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="clubDescripcion" class="form-label">Descripción (opcional)</label>
+              <textarea class="form-control" id="clubDescripcion" rows="3" placeholder="Breve descripción del club..."></textarea>
+            </div>
+
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="clubActivo" checked>
+                <label class="form-check-label" for="clubActivo">
+                  <strong>Club Activo</strong>
+                  <br><small class="text-muted">Desmarcar para desactivar temporalmente</small>
+                </label>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-success" onclick="saveNewClub()">
+            <i data-lucide="save" class="me-1"></i>
+            Guardar Club
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-messaging-compat.js"></script>
+
+  <!-- Firebase Configuration (fetch from server for security) -->
+  <script>
+const VAPID_KEY = 'BJklec5TmcAlNhPnCeyTRbDV44eDLHH-pTWcSRFYZw0E6RZI4PG6vbijPmnZcrkUDzc2z365GEksr8rNX8lePdo';
+
+async function initializeFirebase() {
+  try {
+    const firebaseConfig = {
+  apiKey           : 'AIzaSyAojJehdlYbQjfpjaDPCh-59y0rZG-fM34',
+  authDomain       : 'nightdreams-f90b0.firebaseapp.com',
+  projectId        : 'nightdreams-f90b0',
+  storageBucket    : 'nightdreams-f90b0.appspot.com',             // ✔ dominio corregido
+  messagingSenderId: '1011859565794',
+  appId            : '1:1011859565794:web:f9a5faa6ea2a10f47202bb',
+  measurementId    : 'G-NHMYKW05DT'
+};
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+    window.auth = firebase.auth();
+    window.db = firebase.firestore();
+    window.messaging = firebase.messaging.isSupported() ? firebase.messaging() : null;
+
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) return (window.location.href = "access.html");
+
+      const userDoc = await db.collection('usuarios').doc(user.uid).get();
+
+    if (!userDoc.exists) {
+      console.log('[AUTH] Usuario no existe en Firestore');
+      return { acceso: false, motivo: 'usuario_no_existe' };
+    }
+    
+    const userData = userDoc.data();
+    console.log('[AUTH] Datos usuario:', userData);
+    
+    // Verificar si es admin (email especial o rol admin)
+    const isAdmin = userData.correo === 'official.nightdreams@gmail.com' || 
+                   userData.rol === 'admin' || 
+                   userData.rol === 'Admin';
+    
+    if (isAdmin) {
+  console.log('[AUTH] Usuario es admin, acceso concedido');
+  await loadAdminData();
+  return;
+}
+    });
+    
+  } catch (error) {
+    console.error('[AUTH] Error verificando acceso:', error);
+    return { acceso: false, motivo: 'error_verificacion' };
+  }
+}
+
+// Llama a loadWeekSchedule() al cargar admin
+async function loadAdminData() {
+  try {
+    showLoader(true);
+    await Promise.all([loadUsuarios(), loadClubs(), loadWeekSchedule()]);
+    lucide?.createIcons?.();
+  } catch (err) {
+    console.error("Error cargando datos admin:", err);
+  } finally {
+    showLoader(false);
+  }
+}
+
+async function getAdminToken() {
+  try {
+    if (!messaging) throw new Error("Firebase Messaging no compatible");
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return alert('Permiso de notificación denegado');
+
+    const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+
+    document.getElementById('adminTokenDisplay').textContent = token;
+    console.log('🔔 TOKEN DE ADMIN:', token);
+
+    const user = auth.currentUser;
+    if (user) {
+      await db.collection('usuarios').doc(user.uid).update({
+        tokenPush: token,
+        ultimoTokenUpdate: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    alert('Token obtenido y guardado. Copia desde la consola (F12).');
+  } catch (error) {
+    console.error("❌ Error obteniendo token:", error);
+    document.getElementById('adminTokenDisplay').textContent = 'Error obteniendo token';
+  }
+}
+
+async function loadUsuarios() {
+  try {
+    const snapshot = await db.collection('usuarios').orderBy('fechaRegistro', 'desc').get();
+    const usuarios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    displayUsuarios(usuarios);
+  } catch (err) {
+    console.error("Error cargando usuarios:", err);
+    document.getElementById('usuariosTable').innerHTML = errorRow('usuarios');
+  }
+}
+
+function displayUsuarios(lista) {
+  const table = document.getElementById('usuariosTable');
+  if (lista.length === 0) {
+    table.innerHTML = emptyRow('usuarios');
+    return;
+  }
+
+  table.innerHTML = lista.map(u => {
+    const fecha = u.fechaRegistro ? new Date(u.fechaRegistro.seconds * 1000).toLocaleDateString() : 'N/A';
+    const badgeRol = `<span class="badge bg-info">${u.rol || 'N/A'}</span>`;
+    const badgeEstado = `<span class="badge ${estadoColor(u.estado)}">${u.estado || 'N/A'}</span>`;
+
+    return `
+      <tr>
+        <td>${u.nombre || 'N/A'}</td>
+        <td>${u.correo || 'N/A'}</td>
+        <td>${badgeRol}</td>
+        <td>${badgeEstado}</td>
+        <td>${fecha}</td>
+        <td><div class="d-flex gap-1">${accionesUsuario(u)}</div></td>
+      </tr>
+    `;
+  }).join('');
+
+  lucide?.createIcons?.();
+}
+
+function accionesUsuario(u) {
+  const botones = [];
+  if (u.estado === 'Pendiente') {
+    botones.push(btnAprobar(u.id), btnRechazar(u.id));
+  } else if (u.estado === 'Rechazado') {
+    botones.push(btnAprobar(u.id));
+  }
+  if (u.rol !== 'Admin') {
+    botones.push(btnEliminar(u.id));
+  }
+  return botones.join('');
+}
+
+const btnAprobar = id => `<button class="btn btn-sm btn-success" onclick="changeUserStatus('${id}', 'Aprobado')"><i data-lucide="check"></i></button>`;
+const btnRechazar = id => `<button class="btn btn-sm btn-danger" onclick="changeUserStatus('${id}', 'Rechazado')"><i data-lucide="x"></i></button>`;
+const btnEliminar = id => `<button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${id}')"><i data-lucide="trash-2"></i></button>`;
+const estadoColor = estado => ({
+  'Aprobado': 'bg-success',
+  'Pendiente': 'bg-warning text-dark',
+  'Rechazado': 'bg-danger'
+}[estado] || 'bg-secondary');
+
+async function changeUserStatus(id, nuevoEstado) {
+  try {
+    await db.collection('usuarios').doc(id).update({
+      estado: nuevoEstado,
+      ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await loadUsuarios();
+    alert(`Usuario ${nuevoEstado.toLowerCase()} exitosamente`);
+  } catch (err) {
+    console.error("Error al cambiar estado:", err);
+    alert("No se pudo actualizar el estado");
+  }
+}
+
+async function deleteUser(id) {
+  try {
+    await db.collection('usuarios').doc(id).delete();
+    await loadUsuarios();
+    alert("Usuario eliminado correctamente");
+  } catch (err) {
+    console.error("Error al eliminar:", err);
+    alert("No se pudo eliminar");
+  }
+}
+
+async function loadClubs() {
+  try {
+    const snapshot = await db.collection('clubs').orderBy('nombre').get();
+    const clubs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    displayClubs(clubs);
+  } catch (err) {
+    console.error("Error cargando clubs:", err);
+    document.getElementById('clubsTable').innerHTML = errorRow('clubs');
+  }
+}
+
+function displayClubs(lista) {
+  const table = document.getElementById('clubsTable');
+  if (lista.length === 0) {
+    table.innerHTML = emptyRow('clubs');
+    return;
+  }
+
+  table.innerHTML = lista.map(c => {
+    const activo = c.activo !== false;
+    // Mostrar disponibilidad como insignias visuales
+    let dispHtml = '';
+    if (c.disponibilidad && typeof c.disponibilidad === 'object') {
+      const dias = Object.keys(c.disponibilidad).filter(d => c.disponibilidad[d]);
+      if (dias.length === 7) {
+        dispHtml = '<span class="badge bg-success">Toda la semana</span>';
+      } else if (dias.length > 0) {
+        dispHtml = dias.map(d => {
+          const abrev = d.slice(0,3).charAt(0).toUpperCase() + d.slice(1,3);
+          return `<span class="badge bg-primary me-1">${abrev}</span>`;
+        }).join('');
+      } else {
+        dispHtml = '<span class="badge bg-secondary">Sin días</span>';
+      }
+    } else if (c.disponibilidad === 'siempre') {
+      dispHtml = '<span class="badge bg-success">Siempre</span>';
+    } else {
+      dispHtml = '<span class="badge bg-secondary">N/A</span>';
+    }
+    return `
+      <tr>
+        <td><strong>${c.nombre || 'N/A'}</strong></td>
+        <td>${dispHtml}</td>
+        <td>${c.fullTicket ? badge("Sí", "success") : badge("No", "secondary")}</td>
+        <td>${c.preSale ? badge("Sí", "info") : badge("No", "secondary")}</td>
+        <td>${badge(activo ? "Activo" : "Inactivo", activo ? "success" : "danger")}</td>
+        <td>
+          <div class="d-flex gap-1">
+            <button class="btn btn-sm btn-outline-primary" onclick="editClub('${c.id}')"><i data-lucide="edit"></i></button>
+            <button class="btn btn-sm ${activo ? 'btn-outline-warning' : 'btn-outline-success'}" onclick="toggleClubStatus('${c.id}', ${!activo})">
+              <i data-lucide="${activo ? 'eye-off' : 'eye'}"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteClub('${c.id}')"><i data-lucide="trash-2"></i></button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+  lucide?.createIcons?.();
+}
+
+function badge(text, color) {
+  return `<span class="badge bg-${color}">${text}</span>`;
+}
+
+async function toggleClubStatus(id, active) {
+  try {
+    await db.collection('clubs').doc(id).update({ activo: active });
+    await loadClubs();
+    alert(`Club ${active ? 'activado' : 'desactivado'} correctamente`);
+  } catch (err) {
+    console.error("Error activando/desactivando club:", err);
+    alert("No se pudo cambiar el estado del club");
+  }
+}
+
+function showLoader(show) {
+  const el = document.getElementById('loadingOverlay');
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
+function emptyRow(entidad) {
+  return `<tr><td colspan="6" class="text-center text-muted">No hay ${entidad}</td></tr>`;
+}
+
+function errorRow(entidad) {
+  return `<tr><td colspan="6" class="text-center text-danger">Error cargando ${entidad}</td></tr>`;
+}
+
+const WEEK_DAYS_ORDER = [
+  'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'
+];
+
+// Cargar Week Schedule
+async function loadWeekSchedule() {
+  try {
+    const snapshot = await db.collection('WeekDays').get();
+    const docs = {};
+    snapshot.forEach(doc => {
+      docs[doc.id.toLowerCase()] = { id: doc.id, ...doc.data() };
+    });
+
+    // Cargar plantilla
+    const plantillaDoc = await db.collection('WeekDays').doc('ZztLcBI1ZVBhPvewSUMi').get();
+    const plantilla = plantillaDoc.exists ? plantillaDoc.data() : {};
+
+    // Renderizar tabla
+    const table = document.getElementById('weekScheduleTable');
+    table.innerHTML = WEEK_DAYS_ORDER.map(dia => {
+      const data = docs[dia] || {};
+      const clubs = data.clubs || {};
+      const clubRows = Object.entries(clubs)
+        .filter(([club, val]) => val !== null)
+        .map(([club, val]) => `
+          <div class="mb-2 border rounded p-2">
+            <strong>${club}</strong>
+            <span class="badge bg-${val.drink ? 'success' : 'secondary'} ms-2">${val.drink ? 'Con Drink' : 'Sin Drink'}</span>
+            <span class="ms-2">💲${val.precio || ''}</span>
+            <span class="ms-2">🕒 ${val.hora || ''}</span>
+            <span class="ms-2">${val.otro || ''}</span>
+            <button class="btn btn-sm btn-outline-danger ms-2" onclick="removeClubFromDay('${data.id}','${club}')"><i data-lucide="trash-2"></i></button>
+          </div>
+        `).join('') || '<span class="text-muted">Sin clubs asignados</span>';
+
+      return `
+        <tr>
+          <td class="fw-bold text-capitalize">${dia}</td>
+          <td>${clubRows}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary" onclick="showAddClubModal('${data.id || dia}')">
+              <i data-lucide="plus"></i> Añadir Club
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+    lucide?.createIcons?.();
+  } catch (err) {
+    document.getElementById('weekScheduleTable').innerHTML = `<tr><td colspan="3" class="text-center text-danger">Error cargando horarios</td></tr>`;
+    console.error("Error cargando Week Schedule:", err);
+  }
+}
+
+// Modal para añadir club a un día
+function showAddClubModal(diaId) {
+  // Puedes usar un modal Bootstrap existente o crear uno aquí
+  // Aquí un ejemplo simple con prompt:
+  const club = prompt('Nombre del club:');
+  if (!club) return;
+  const drink = confirm('¿Con drink incluido?');
+  const precio = prompt('Precio:');
+  const hora = prompt('Hora:');
+  const otro = prompt('Otro (opcional):');
+
+  // Guardar en Firestore
+  addClubToDay(diaId, club, { drink, precio, hora, otro });
+}
+
+async function addClubToDay(diaId, club, data) {
+  try {
+    const ref = db.collection('WeekDays').doc(diaId);
+    await ref.set({ clubs: { [club]: data } }, { merge: true });
+    await loadWeekSchedule();
+  } catch (err) {
+    alert('Error añadiendo club');
+    console.error(err);
+  }
+}
+
+async function removeClubFromDay(diaId, club) {
+  try {
+    const ref = db.collection('WeekDays').doc(diaId);
+    await ref.update({ [`clubs.${club}`]: firebase.firestore.FieldValue.delete() });
+    await loadWeekSchedule();
+  } catch (err) {
+    alert('Error eliminando club');
+    console.error(err);
+  }
+}
+
+
+
+// Inicialización DOM
+document.addEventListener('DOMContentLoaded', () => {
+  initializeFirebase();
+
+  const btnToken = document.getElementById('getTokenBtn');
+  const btnCopiar = document.getElementById('copyTokenBtn');
+
+  if (btnToken) btnToken.addEventListener('click', getAdminToken);
+
+  if (btnCopiar) {
+    btnCopiar.addEventListener('click', () => {
+      const token = (document.getElementById('adminTokenDisplay').textContent || '').trim();
+      if (token && !token.includes('Error')) {
+        navigator.clipboard.writeText(token)
+          .then(() => alert('Token copiado al portapapeles'))
+          .catch(() => alert('No se pudo copiar. Copia manualmente desde consola.'));
+      } else {
+        alert('Primero obtén el token');
+      }
+    });
+  }
+});
+</script>
+
+</body>
+</html>

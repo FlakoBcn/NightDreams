@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>NightDreams – Acceso</title>
+  <link rel="manifest" href="manifest.json" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    .logo-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; font-weight: 500; text-transform: uppercase; }
+    input.form-control { border-radius: 12px; padding: 12px 16px; font-size: 1rem; background-color: #f9f9f9; border: 1px solid #ccc; }
+    .card { border-radius: 24px; padding: 30px 25px; }
+    .btn-dark { border-radius: 14px; font-weight: bold; font-size: 1rem; padding: 10px; }
+    .pwa-banner { background: #fff3cd; color: #856404; padding: 1em; border-radius: 16px; text-align: center; font-weight: bold; }
+    .hide { display: none !important; }
+    .small { font-size: 0.97em; }
+    
+    /* Deshabilitar gestos de navegación en móviles */
+    html, body {
+      overscroll-behavior-x: none;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y pinch-zoom;
+    }
+    
+    /* Deshabilitar swipe back en iOS Safari */
+    body {
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: contain;
+    }
+    /* Solo deshabilitar selección en botones para accesibilidad */
+    button, .btn {
+      -webkit-user-select: none;
+      user-select: none;
+    }
+  </style>
+
+  <!-- Firebase SDK from CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-messaging-compat.js"></script>
+
+  <!-- Firebase Configuration -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAojJehdlYbQjfpjaDPCh-59y0rZG-fM34",
+      authDomain: "nightdreams-f90b0.firebaseapp.com",
+      projectId: "nightdreams-f90b0",
+      storageBucket: "nightdreams-f90b0.appspot.com",
+      messagingSenderId: "1011859565794",
+      appId: "1:1011859565794:web:f9a5faa6ea2a10f47202bb",
+      measurementId: "G-NHMYKW05DT"
+    };
+    
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    
+    // Inicializar Firebase Messaging
+    let messaging = null;
+    if (firebase.messaging.isSupported()) {
+      messaging = firebase.messaging();
+    }
+
+  </script>
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center vh-100">
+  <div class="container px-4">
+    <div class="card shadow text-center">
+      <div class="mb-4">
+        <img src="icon-192.png" class="mb-3" width="72" height="72">
+        <h2 class="logo-font mb-0">NightDreams</h2>
+        <p class="text-muted small" style="margin-top: -5px;">Team registración</p>
+      </div>
+      <div id="pwaBanner" class="pwa-banner mb-3 hide">
+        <span>Para registrarte, <b>añade NightDreams a la pantalla de inicio</b>.<br>¡Instala la app y vuelve aquí!</span><br>
+        <button id="btnInstall" class="btn btn-warning mt-2">Instalar App</button>
+        <div class="mt-1 text-muted" style="font-size:0.95em">
+          <b>Android:</b> Menú (⋮) > "Agregar a pantalla de inicio"<br>
+          <b>iOS:</b> Compartir (⬆) > "Añadir a pantalla de inicio"
+        </div>
+      </div>
+      <form id="registroForm" class="text-start hide">
+        <div class="mb-3">
+          <input type="text" class="form-control" id="nombre" placeholder="Nombre completo" required>
+        </div>
+        <div class="mb-3">
+          <input type="email" class="form-control" id="correo" placeholder="Correo electrónico" required>
+        </div>
+        <div class="mb-3">
+          <input type="password" class="form-control" id="password" placeholder="Contraseña (mínimo 6 caracteres)" required minlength="6">
+          <div class="form-text">
+            <small class="text-muted">
+              <strong>Admin:</strong> official.nightdreams@gmail.com tendrá permisos completos automáticamente
+            </small>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-dark w-100">Registrarse / Acceder</button>
+      </form>
+            <div id="resultado" class="mt-3 text-start"></div>
+      <div id="cargando" class="mt-3 alert alert-info">Cargando...</div>
+    </div>
+  </div>
+
+  
+<script>
+   document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('registroForm');
+      const resultado = document.getElementById('resultado');
+      const cargandoDiv = document.getElementById('cargando');
+      const pwaBanner = document.getElementById('pwaBanner');
+      const btnInstall = document.getElementById('btnInstall');
+      
+      let deferredPrompt;
+
+      function isStandaloneMode() {
+        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      }
+      
+        function showBanner() {
+        pwaBanner.classList.remove('hide');
+        form.classList.add('hide');
+        cargandoDiv.classList.add('hide');
+      }
+      
+        function showForm() {
+        pwaBanner.classList.add('hide');
+        form.classList.remove('hide');
+        cargandoDiv.classList.add('hide');
+      }
+      
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        showBanner();
+        btnInstall.onclick = async () => {
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          location.reload();
+        };
+      });
+
+      // El listener del formulario se define una sola vez.
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const submitButton = ev.target.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        resultado.innerHTML = '<div class="alert alert-secondary">Procesando…</div>';
+
+        const nombre = document.getElementById('nombre').value.trim();
+        const email = document.getElementById('correo').value.trim().toLowerCase();
+        const password = document.getElementById('password').value;
+        const isAdmin = email === 'official.nightdreams@gmail.com';
+      
+        try {
+          let cred;
+          try {
+            // 1. Intenta CREAR el usuario primero.
+            cred = await auth.createUserWithEmailAndPassword(email, password);
+            await cred.user.updateProfile({ displayName: nombre });
+          } catch (error) {
+            // 2. Si el correo ya existe, intenta iniciar sesión.
+            if (error.code === 'auth/email-already-in-use') {
+              cred = await auth.signInWithEmailAndPassword(email, password);
+            } else {
+              // Lanza otros errores de creación (ej. contraseña débil)
+              throw error;
+            }
+          }
+
+          const ref = db.collection('usuarios').doc(cred.user.uid);
+          const snap = await ref.get();
+          const destino = isAdmin || (snap.exists && snap.data().estado === "Aprobado") ? 'index.html' : 'espera.html';
+
+          if (cred.additionalUserInfo?.isNewUser) {
+            await db.collection('usuarios').doc(cred.user.uid).set({
+              nombre: nombre,
+              correo: email,
+              rol: isAdmin ? 'admin' : 'promotor',
+              estado: isAdmin ? 'Aprobado' : 'Pendiente',
+              fechaRegistro: firebase.firestore.FieldValue.serverTimestamp(),
+              permisos: {
+                admin: isAdmin,
+                eliminar: isAdmin,
+                modificar: true,
+                ver_todo: isAdmin
+              }
+            });
+            console.log('Documento Firestore creado para UID:', cred.user.uid);
+          }
+          
+          resultado.innerHTML = `<div class="alert alert-success">¡${isAdmin ? 'Admin' : 'Operación exitosa'}! Redirigiendo…</div>`;
+          setTimeout(() => location.replace(destino), 1200);
+
+        } catch (err) {
+          console.error("Error en registro/acceso:", err);
+          let mensajeError = 'Ocurrió un error inesperado.';
+          switch (err.code) {
+            case 'auth/wrong-password':
+              mensajeError = 'La contraseña es incorrecta. Inténtalo de nuevo.';
+              break;
+            case 'auth/invalid-email':
+              mensajeError = 'El formato del correo electrónico no es válido.';
+              break;
+            case 'auth/email-already-in-use':
+              mensajeError = 'Este correo ya está registrado. Intenta acceder.';
+              break;
+            case 'auth/weak-password':
+              mensajeError = 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres.';
+              break;
+            default:
+              mensajeError = err.message;
+          }
+          resultado.innerHTML = `<div class="alert alert-danger">❌ ${mensajeError}</div>`;
+          submitButton.disabled = false;
+        }
+      });
+
+      // Asegurarse de que Firebase Auth está listo antes de mostrar el formulario.
+      auth.onAuthStateChanged(user => {
+        // Esta función se ejecuta cuando el estado de autenticación está listo.
+        // Ahora podemos decidir si mostrar el banner PWA o el formulario de registro.
+        if (!isStandaloneMode()) {
+          showBanner();
+        } else {
+          showForm();
+        }
+      });
+});
+</script>
+
+</body>
+</html>
+
+    </div>
+  </div>
+
+  
+<script>
+   document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('registroForm');
+      const resultado = document.getElementById('resultado');
+      
+      // --- CONTROL INSTALACIÓN PWA ---
+      let deferredPrompt;
+
+      function isStandaloneMode() {
+        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      }
+      
+      function showBanner() {
+        document.getElementById('pwaBanner').classList.remove('hide');
+        document.getElementById('registroForm').classList.add('hide');
+      }
+      
+      function showForm() {
+        document.getElementById('pwaBanner').classList.add('hide');
+        document.getElementById('registroForm').classList.remove('hide');
+      }
+      
+      // Decide si mostrar el banner o el formulario al cargar la página
+      if (!isStandaloneMode()) {
+        showBanner();
+      } else {
+        showForm();
+      }
+      
+      // Listener para capturar el evento de instalación
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        showBanner(); // Muestra el banner si el evento se dispara
+        document.getElementById('btnInstall').onclick = async () => {
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          location.reload();
+        };
+      });
+      // --- FIN CONTROL PWA ---
+
+
+      // Asegurarse de que Firebase Auth está listo antes de adjuntar el listener del formulario.
+      auth.onAuthStateChanged(user => {
+        if (!form.dataset.listenerAttached) {
+          form.addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const submitButton = ev.target.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            resultado.innerHTML = '<div class="alert alert-secondary">Procesando…</div>';
+
+            const nombre = document.getElementById('nombre').value.trim();
+            const email = document.getElementById('correo').value.trim().toLowerCase();
+            const password = document.getElementById('password').value;
+            const isAdmin = correo === 'official.nightdreams@gmail.com';
+          
+            try {
+              let cred;
+              try {
+                cred = await auth.signInWithEmailAndPassword(email, password);
+              } catch (err) {
+                if (err.code !== 'auth/user-not-found') throw err;
+                cred = await auth.createUserWithEmailAndPassword(email, password);
+                await cred.user.updateProfile({ displayName: nombre });
+              }
+
+              const ref = db.collection('usuarios').doc(cred.user.uid);
+              const snap = await ref.get();
+              const destino = isAdmin || (snap.exists && snap.data().estado === "Aprobado") ? 'index.html' : 'espera.html';
+
+              if (cred.additionalUserInfo?.isNewUser) {
+                await db.collection('usuarios').doc(cred.user.uid).set({
+                  nombre: nombre,
+                  correo: email,
+                  rol: isAdmin ? 'admin' : 'promotor',
+                  estado: isAdmin ? 'Aprobado' : 'Pendiente',
+                  fechaRegistro: firebase.firestore.FieldValue.serverTimestamp(),
+                  permisos: {
+                    admin: isAdmin,
+                    eliminar: isAdmin,
+                    modificar: true,
+                    ver_todo: isAdmin
+                  }
+                });
+                console.log('Documento Firestore creado para UID:', cred.user.uid);
+              }
+              
+              resultado.innerHTML = `<div class="alert alert-success">¡${isAdmin ? 'Admin' : 'Operación exitosa'}! Redirigiendo…</div>`;
+              setTimeout(() => location.replace(destino), 1200);
+
+            } catch (err) {
+              submitButton.disabled = false;
+              resultado.innerHTML = `<div class="alert alert-danger">❌ ${err.message}</div>`;
+            }
+          });
+          form.dataset.listenerAttached = 'true';
+        }
+      });
+});
+</script>
+
+</body>
+</html>

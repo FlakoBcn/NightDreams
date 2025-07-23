@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cuenta Pendiente - NightDreams</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .logo-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; font-weight: 500; }
+    .waiting-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px; }
+    .notification-card { background: #f8f9fa; border-radius: 15px; }
+    .token-status { font-family: 'Courier New', monospace; font-size: 0.9em; }
+  </style>
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center vh-100">
+  <div class="container px-4">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        
+        <!-- Tarjeta principal de espera -->
+        <div class="card waiting-card shadow mb-4">
+          <div class="card-body text-center p-5">
+            <div class="mb-4">
+              <i data-lucide="clock" class="mb-3" style="width: 64px; height: 64px;"></i>
+              <h2 class="logo-font mb-3">Cuenta Pendiente</h2>
+              <p class="lead">Tu solicitud está siendo revisada por nuestro equipo.</p>
+            </div>
+            
+            <div class="mb-4">
+              <h5 id="userName" class="mb-1">Usuario</h5>
+              <small id="userEmail" class="opacity-75">email@ejemplo.com</small>
+            </div>
+            
+            <div class="alert alert-light text-dark">
+              <i data-lucide="info" class="me-2" style="width: 18px; height: 18px;"></i>
+              <strong>¡Activa las notificaciones!</strong><br>
+              Te avisaremos cuando tu cuenta sea aprobada
+            </div>
+          </div>
+        </div>
+
+        <!-- Tarjeta de notificaciones -->
+        <div class="card notification-card shadow">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-3">
+              <i data-lucide="bell" class="me-2" style="width: 24px; height: 24px;"></i>
+              <h5 class="mb-0">Notificaciones Push</h5>
+            </div>
+            
+            <div id="tokenStatus" class="token-status mb-3 p-3 bg-white rounded">
+              <span class="text-muted">Presiona el botón para activar notificaciones...</span>
+            </div>
+            
+            <div class="d-grid gap-2">
+              <button id="activarNotifBtn" class="btn btn-primary">
+                <i data-lucide="bell-ring" class="me-2" style="width: 18px; height: 18px;"></i>
+                Activar Notificaciones
+              </button>
+              
+              <div class="text-center mt-3">
+                <button id="logoutBtn" class="btn btn-outline-secondary btn-sm">
+                  <i data-lucide="log-out" class="me-1" style="width: 16px; height: 16px;"></i>
+                  Cerrar Sesión
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-messaging-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAojJehdlYbQjfpjaDPCh-59y0rZG-fM34",
+      authDomain: "nightdreams-f90b0.firebaseapp.com",
+      projectId: "nightdreams-f90b0",
+      storageBucket: "nightdreams-f90b0.appspot.com",
+      messagingSenderId: "1011859565794",
+      appId: "1:1011859565794:web:f9a5faa6ea2a10f47202bb",
+      measurementId: "G-NHMYKW05DT"
+    };
+    
+    // Evitar doble inicialización
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    
+    let messaging = null;
+    if (firebase.messaging.isSupported()) {
+      messaging = firebase.messaging();
+    }
+
+    const VAPID_KEY = 'BJklec5TmcAlNhPnCeyTRbDV44eDLHH-pTWcSRFYZw0E6RZI4PG6vbijPmnZcrkUDzc2z365GEksr8rNX8lePdo';
+
+    // Verificar usuario y mostrar datos
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        window.location.href = "access.html";
+        return;
+      }
+
+      try {
+        const userDoc = await db.collection('usuarios').doc(user.uid).get();
+        if (!userDoc.exists) {
+          window.location.href = "access.html";
+          return;
+        }
+
+        const userData = userDoc.data();
+        
+        // Si ya está aprobado, redirigir a la app
+        if (userData.estado === 'Aprobado' || userData.permisos?.admin) {
+          window.location.href = "index.html";
+          return;
+        }
+
+        // Mostrar datos del usuario
+        document.getElementById('userName').textContent = userData.nombre || 'Usuario';
+        document.getElementById('userEmail').textContent = userData.correo || user.mail;
+        
+        // Verificar si ya tiene token guardado
+        if (userData.tokenPush) {
+          document.getElementById('tokenStatus').innerHTML = 
+            `<span class="text-success">✅ Notificaciones activadas</span><br>
+             <small class="text-muted">Te avisaremos cuando seas aprobado</small>`;
+          document.getElementById('activarNotifBtn').innerHTML = 
+            `<i data-lucide="check-circle" class="me-2" style="width: 18px; height: 18px;"></i>
+             Notificaciones Activas`;
+          document.getElementById('activarNotifBtn').disabled = true;
+          document.getElementById('activarNotifBtn').classList.replace('btn-primary', 'btn-success');
+        }
+
+      } catch (error) {
+        console.error('Error verificando usuario:', error);
+        window.location.href = "access.html";
+      }
+    });
+
+    // Activar notificaciones
+    document.getElementById('activarNotifBtn').addEventListener('click', async () => {
+      try {
+        if (!messaging) {
+          alert('Tu navegador no soporta notificaciones push');
+          return;
+        }
+
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          alert('Necesitas dar permiso para las notificaciones');
+          return;
+        }
+
+        document.getElementById('tokenStatus').innerHTML = 
+          '<span class="text-primary">🔄 Generando token...</span>';
+
+        const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+        
+        if (!token) {
+          throw new Error('No se pudo generar el token');
+        }
+
+        // Guardar token en Firestore
+        const user = auth.currentUser;
+        await db.collection('usuarios').doc(user.uid).update({
+          tokenPush: token,
+          ultimoTokenUpdate: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Actualizar UI
+        document.getElementById('tokenStatus').innerHTML = 
+          `<span class="text-success">✅ Notificaciones activadas</span><br>
+           <small class="text-muted">Te avisaremos cuando seas aprobado</small>`;
+        
+        document.getElementById('activarNotifBtn').innerHTML = 
+          `<i data-lucide="check-circle" class="me-2" style="width: 18px; height: 18px;"></i>
+           Notificaciones Activas`;
+        document.getElementById('activarNotifBtn').disabled = true;
+        document.getElementById('activarNotifBtn').classList.replace('btn-primary', 'btn-success');
+
+        console.log('🔔 Token guardado para promotor pendiente:', token);
+        alert('¡Notificaciones activadas! Te avisaremos cuando seas aprobado.');
+
+      } catch (error) {
+        console.error('Error activando notificaciones:', error);
+        document.getElementById('tokenStatus').innerHTML = 
+          '<span class="text-danger">❌ Error activando notificaciones</span>';
+        alert('Error activando notificaciones: ' + error.message);
+      }
+    });
+
+    // Cerrar sesión
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await auth.signOut();
+      window.location.href = "access.html";
+    });
+
+    // Inicializar iconos
+    lucide.createIcons();
+  </script>
+</body>
+</html>
