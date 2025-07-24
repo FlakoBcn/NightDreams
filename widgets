@@ -1,0 +1,123 @@
+<!-- Panel visual para crear y editar formularios en admin.html --><div class="card my-4 shadow">
+  <div class="card-header bg-dark text-white">
+    <h5>🛠️ Gestor de Formularios Dinámicos</h5>
+  </div>
+  <div class="card-body">
+    <!-- Formulario para crear/editar widgets -->
+    <form id="widgetForm">
+      <div class="mb-2">
+        <label>ID Widget</label>
+        <input type="text" id="widgetId" class="form-control" placeholder="Ej. vipTableForm" required>
+      </div><div class="mb-2">
+    <label>Título Visible</label>
+    <input type="text" id="widgetTitulo" class="form-control" placeholder="Ej. Reserva VIP Table">
+  </div>
+
+  <div class="mb-2">
+    <label>URL Google Apps Script (GAS)</label>
+    <input type="url" id="widgetUrl" class="form-control" placeholder="https://script.google.com/macros/...">
+  </div>
+
+  <div class="mb-2">
+    <label>HTML del Formulario</label>
+    <textarea id="widgetHtml" rows="5" class="form-control" placeholder="<form>...</form>"></textarea>
+  </div>
+
+  <div class="mb-2">
+    <label>Código JS adicional (opcional)</label>
+    <textarea id="widgetScript" rows="3" class="form-control" placeholder="console.log('extra logic');"></textarea>
+  </div>
+
+  <button type="submit" class="btn btn-success">Guardar Formulario</button>
+</form>
+
+<hr>
+
+<!-- Listado de widgets actuales -->
+<h5>📋 Formularios existentes:</h5>
+<ul id="listaWidgets" class="list-group"></ul>
+
+  </div>
+</div><script>
+  async function cargarWidgets() {
+    const snapshot = await db.collection('widgets').where('tipo', '==', 'formulario').get();
+    const lista = document.getElementById('listaWidgets');
+    lista.innerHTML = '';
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const li = document.createElement('li');
+      li.className = 'list-group-item d-flex justify-content-between align-items-center';
+      li.innerHTML = `
+        <strong>${data.titulo}</strong>
+        <span>
+          <button class="btn btn-sm btn-warning me-1" onclick="editarWidget('${doc.id}')">Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="borrarWidget('${doc.id}')">Eliminar</button>
+        </span>
+      `;
+      lista.appendChild(li);
+    });
+  }
+
+  document.getElementById('widgetForm').addEventListener('submit', async e => {
+    e.preventDefault();
+
+    const id = document.getElementById('widgetId').value.trim();
+    const titulo = document.getElementById('widgetTitulo').value;
+    const html = document.getElementById('widgetHtml').value;
+    const urlGAS = document.getElementById('widgetUrl').value;
+    const scripts = document.getElementById('widgetScript').value;
+
+    const scriptCompleto = `
+document.querySelector('#${id} form').addEventListener('submit', e => enviarReserva(e, '${urlGAS}'));
+${scripts}`;
+
+    await db.collection('widgets').doc(id).set({
+      tipo: "formulario",
+      titulo,
+      html: `<div id="${id}">${html}</div>`,
+      script: scriptCompleto,
+      activo: true
+    });
+
+    alert('Formulario guardado correctamente ✅');
+    cargarWidgets();
+    document.getElementById('widgetForm').reset();
+  });
+
+  async function editarWidget(id) {
+    const doc = await db.collection('widgets').doc(id).get();
+    if (!doc.exists) return alert('No existe ese widget');
+
+    const data = doc.data();
+
+    document.getElementById('widgetId').value = id;
+    document.getElementById('widgetTitulo').value = data.titulo;
+    document.getElementById('widgetHtml').value = data.html.replace(`<div id="${id}">`, '').replace('</div>', '');
+    document.getElementById('widgetScript').value = data.script;
+  }
+
+  async function borrarWidget(id) {
+    if (!confirm('¿Seguro quieres borrar este widget?')) return;
+    await db.collection('widgets').doc(id).delete();
+    alert('Widget eliminado ✅');
+    cargarWidgets();
+  }
+
+  async function enviarReserva(event, urlGAS) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+
+    try {
+      const res = await fetch(urlGAS, { method: 'POST', body: formData });
+      if (res.ok) alert('Reserva enviada correctamente ✅');
+      else throw new Error('Fallo al enviar reserva.');
+    } catch (err) {
+      console.error(err);
+      alert('Error enviando reserva.');
+    }
+  }
+
+  // Inicializar lista de widgets
+  cargarWidgets();
+</script>
