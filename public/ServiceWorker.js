@@ -1,5 +1,5 @@
-/* NightDreams – Service Worker v25 (online‑only, sin FCM) */
-const CACHE = 'nd-v25-offline';
+/* NightDreams – Service Worker v31 (online‑only, sin FCM) */
+const CACHE = 'nd-v31-offline';
 const OFFLINE = '/offline.html';
 
 /* install */
@@ -31,4 +31,4 @@ self.addEventListener('message', e => {
   if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-console.info('[SW] NightDreams v25 listo (online‑only)');
+console.info('[SW] NightDreams v31 listo (online‑only)');

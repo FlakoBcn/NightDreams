@@ -75,6 +75,9 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/ServiceWorker.js')
   .then(r => console.log('[SW] registrado', r.scope))
   .catch(console.warn);
+navigator.serviceWorker.register('/firebase-messaging-sw.js')
+    .then(r => console.log('[FCM SW] registrado', r.scope))
+    .catch(console.warn);
 }
 
 /* CONEXIÓN *****************************************************************/
@@ -224,7 +227,7 @@ async function handleAuthStateChanged(user, currentPage) {
     updateUserUI(userData.nombre, userData.correo, userData.rol, esAdmin);
   }
 
-  console.log('[AUTH] ✅ Acceso concedido y UI actualizada');
+  console.log('[AUTH] ✅ Acceso concedido');
 }
 
 async function initAuth() {

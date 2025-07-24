@@ -17,6 +17,7 @@ const listeners = [];
 /* ────────────────────────────────────────────────────────── */
 export async function init() {
   console.log('[Formulario] init');
+  console.log('[Formulario] Cargando formulario de reserva...');
 
   // Asegurar que Firebase está disponible
   const { db: firebaseDb } = await loadFirebase();
@@ -92,11 +93,39 @@ export async function init() {
 
   /* cleanup cuando se abandone la página *******************/
   window.pageCleanup = cleanup;
+
+  // Añadir logs a todos los campos editables y clickables
+  function addLogListeners() {
+    const form = document.getElementById('reservaForm');
+    if (!form) return;
+    const logField = (e) => {
+      const el = e.target;
+      let value = el.value;
+      if (el.type === 'checkbox' || el.type === 'radio') value = el.checked;
+      console.log(`[Log] Campo '${el.name || el.id}' cambiado:`, value);
+    };
+    form.querySelectorAll('input,select,button,textarea').forEach(el => {
+      if (el.type === 'button' || el.type === 'submit' || el.type === 'reset') {
+        el.addEventListener('click', logField);
+      } else {
+        el.addEventListener('input', logField);
+        el.addEventListener('change', logField);
+      }
+    });
+  }
+
+  // Llama a addLogListeners al iniciar
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addLogListeners);
+  } else {
+    addLogListeners();
+  }
 }
 
 /* ───────────────────────── lógica paso a paso ───────────────────────── */
 function onFecha(el){
   if(!el.fecha.value) return;
+  console.log(`[Formulario] Fecha seleccionada: ${el.fecha.value}`);
   enableBlocks(['q-club']);
   cargarClubs(el.fecha.value, el.club);
   disableBlocks(['q-nombre','q-pax','q-ticketType','q-importePagar','q-importePagado','q-email','q-movil','q-review']);
@@ -104,6 +133,20 @@ function onFecha(el){
 
 function onClub(el){
   if(!el.club.value) return;
+  console.log(`[Formulario] Club seleccionado: ${el.club.value}`);
+  // Log de todos los valores actuales del formulario
+  const values = {
+    fecha: el.fecha.value,
+    club: el.club.value,
+    nombre: el.nombre.value,
+    pax: el.pax.value,
+    ticketType: el.btnFull.classList.contains('bg-blue-600') ? 'full' : (el.btnPre.classList.contains('bg-blue-600') ? 'pre' : ''),
+    importePagar: el.impPag.value,
+    importePagado: el.impPro.value,
+    email: el.email.value,
+    movil: el.movil.value
+  };
+  console.log('[Formulario] Estado actual del formulario:', values);
   enableBlocks(['q-nombre']);
   disableBlocks(['q-pax','q-ticketType','q-importePagar','q-importePagado','q-email','q-movil','q-review']);
   configurarButtonsPorClub(el);
@@ -111,18 +154,29 @@ function onClub(el){
 
 function onNombre(el){
   const ok = el.nombre.value.trim() !== '';
+  console.log(`[Formulario] Nombre introducido: ${el.nombre.value}`);
   ok ? enableBlocks(['q-pax']) : disableBlocks(['q-pax']);
   disableBlocks(['q-ticketType','q-importePagar','q-importePagado','q-email','q-movil','q-review']);
 }
 
 function onPax(el){
   const ok = parseInt(el.pax.value)||0;
-  ok ? enableBlocks(['q-ticketType']) : disableBlocks(['q-ticketType']);
-  disableBlocks(['q-importePagar','q-importePagado','q-email','q-movil','q-review']);
+  console.log(`[Formulario] Pax introducido: ${el.pax.value}`);
+  if (ok) {
+    // Bypass: activa todos los bloques siguientes y omite ticketType
+    enableBlocks(['q-importePagar','q-importePagado','q-email','q-movil','q-review']);
+    // Opcional: puedes poner valores por defecto si lo deseas
+    // el.btnFull.disabled = false;
+    // el.btnPre.disabled = false;
+  } else {
+    disableBlocks(['q-importePagar','q-importePagado','q-email','q-movil','q-review']);
+  }
+  disableBlocks(['q-ticketType']); // Siempre desactivado
 }
 
 function onTicket(el, tipo){
   /* visual */
+  console.log(`[Formulario] Tipo de ticket seleccionado: ${tipo}`);
   el.btnFull.classList.toggle('bg-blue-600', tipo==='full');
   el.btnFull.classList.toggle('text-white',  tipo==='full');
   el.btnPre.classList.toggle('bg-blue-600',  tipo==='pre');
@@ -141,91 +195,71 @@ function onTicket(el, tipo){
 
 function onImportePagar(el){
   const ok = parseFloat(el.impPag.value) >= 0;
+  console.log(`[Formulario] Importe a pagar introducido: ${el.impPag.value}`);
   ok ? enableBlocks(['q-importePagado']) : disableBlocks(['q-importePagado']);
   disableBlocks(['q-email','q-movil','q-review']);
 }
 
 function onImportePromotor(el){
   const ok = parseFloat(el.impPro.value) >= 0;
+  console.log(`[Formulario] Importe pagado al promotor: ${el.impPro.value}`);
   ok ? enableBlocks(['q-email']) : disableBlocks(['q-email']);
   disableBlocks(['q-movil','q-review']);
 }
 
 function onEmail(el){
   const ok = el.email.checkValidity();
+  console.log(`[Formulario] Email introducido: ${el.email.value}`);
   ok ? enableBlocks(['q-movil']) : disableBlocks(['q-movil']);
   disableBlocks(['q-review']);
 }
 
 function onMovil(el){
   const ok = el.movil.value.trim().length > 0;
+  console.log(`[Formulario] Móvil introducido: ${el.movil.value}`);
   ok ? enableBlocks(['q-review']) : disableBlocks(['q-review']);
 }
 
 /* ───────────────────────── carga de clubs ───────────────────────── */
 async function cargarClubs(fecha, select){
-
-  // Normaliza tildes: 'miércoles' -> 'miercoles', 'sábado' -> 'sabado'
-  function normalize(s) {
-    return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  }
-  select.innerHTML = '<option>Cargando…</option>';
+  // Use English weekday names to avoid localization issues
+  select.innerHTML = '<option>Loading…</option>';
   select.disabled  = true;
-  const diaSemanaRaw = new Date(fecha).toLocaleDateString('es-ES', { weekday: 'long' }).toLowerCase();
-  const diaSemana = normalize(diaSemanaRaw);
-  console.log(`[Clubs] Cargando clubs para ${fecha} (${diaSemanaRaw} -> ${diaSemana})`);
+  const diaSemanaRaw = new Date(fecha).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  const diaSemana = diaSemanaRaw; // Already in English, lowercase
+  console.log(`[Clubs] Searching clubs in WeekDays for ${fecha} (${diaSemanaRaw})`);
 
   try {
     if (!db) {
       throw new Error('Base de datos no inicializada');
     }
-
-    // Primero probar una consulta simple
-    console.log('[Clubs] Probando conexión a Firestore...');
-    const testSnap = await db.collection('clubs').limit(1).get();
-    console.log(`[Clubs] Conexión OK. Total de clubs: ${testSnap.size}`);
-
-    // Si no hay clubs, crear algunos de prueba
-    if (testSnap.size === 0) {
-      console.log('[Clubs] No hay clubs, creando datos de prueba...');
-      await crearClubsDePrueba();
+    // Buscar documento del día en WeekDays
+    const doc = await db.collection('WeekDays').doc(diaSemana).get();
+    if (!doc.exists) {
+      console.warn(`[Clubs] No clubs found for day: ${diaSemana}`);
+      select.innerHTML = '<option disabled>No clubs for this day</option>';
+      select.disabled = true;
+      return;
     }
-
-    // Luego la consulta filtrada
-    const snap = await db.collection('clubs')
-      .where('activo','==',true)
-      .get();
-
-    console.log(`[Clubs] Clubs activos encontrados: ${snap.size}`);
-
-    // Si no hay clubs para el día específico, mostrar todos los activos
-    let filteredDocs = [];
-    snap.forEach(doc => {
-      const d = doc.data();
-      const diasDisponibles = d.disponibilidad || {};
-      console.log(`[Clubs] ${d.nombre} - días disponibles:`, diasDisponibles);
-      
-      // Si tiene el día disponible O si no tiene restricción de días
-      if (diasDisponibles[diaSemana] === true || Object.keys(diasDisponibles).length === 0) {
-        filteredDocs.push(doc);
-      }
-    });
-
-    console.log(`[Clubs] Clubs para ${diaSemana}: ${filteredDocs.length}`);
-
-    select.innerHTML = '<option value="" disabled selected>— Selecciona club —</option>';
-    filteredDocs.forEach(doc => {
-      const d = doc.data();
-      console.log(`[Clubs] Agregando club: ${d.nombre}`);
-      const opt = new Option(d.nombre, d.nombre);
-      opt.dataset.full = d.fullTicket ? 'true':'false';
-      opt.dataset.pre  = d.preSale ? 'true':'false';
-      opt.dataset.clubId = doc.id;
+    const data = doc.data();
+    const clubs = data.clubs || {};
+    const clubKeys = Object.keys(clubs);
+    if (clubKeys.length === 0) {
+      console.warn(`[Clubs] Document for ${diaSemana} has no clubs.`);
+      select.innerHTML = '<option disabled>No clubs for this day</option>';
+      select.disabled = true;
+      return;
+    }
+    select.innerHTML = '<option value="" disabled selected>— Select club —</option>';
+    clubKeys.forEach(clubName => {
+      const opt = new Option(clubName, clubName);
+      // No hay info de full/pre en WeekDays, ambos quedan activos
+      opt.dataset.full = 'true';
+      opt.dataset.pre  = 'true';
       select.append(opt);
     });
-
     select.disabled = false;
-
+    console.log(`[Clubs] Clubs cargados: ${clubKeys.join(', ')}`);
   } catch(err){
     console.error('[Clubs] error:', err);
     select.innerHTML = '<option disabled>Error al cargar</option>';
@@ -305,22 +339,44 @@ async function crearClubsDePrueba() {
 
 
 function configurarButtonsPorClub(el){
-  const opt = el.club.selectedOptions[0];
-  if(!opt) return;
-  const full = opt.dataset.full === 'true';
-  const pre  = opt.dataset.pre  === 'true';
-
-  /* reset */
-  el.btnFull.disabled = el.btnPre.disabled = true;
+  // Siempre activos por defecto
+  el.btnFull.disabled = false;
+  el.btnPre.disabled = false;
   el.btnFull.classList.remove('bg-blue-600','text-white');
-  el.btnPre .classList.remove('bg-blue-600','text-white');
-
-  if (full) el.btnFull.disabled = false;
-  if (pre ) el.btnPre .disabled = false;
+  el.btnPre.classList.remove('bg-blue-600','text-white');
+  console.log('[Formulario] Botón FULL: enabled =', !el.btnFull.disabled);
+  console.log('[Formulario] Botón PRE:  enabled =', !el.btnPre.disabled);
+  console.log('[Formulario] Botones por club: ambos activos por default');
 }
 
 /* ───────────────────────── resumen + envío ───────────────────────── */
-function mostrarResumen(el){
+async function mostrarResumen(el){
+      // --- VALIDACIÓN DE PRECIO MÍNIMO ---
+    // Obtener día de la semana en inglés (ej: monday)
+    const fechaObj = new Date(el.fecha.value);
+    const diaSemana = fechaObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const clubName = el.club.value;
+    // Buscar precio mínimo en WeekDays/{dia}/clubs/{club}
+    const weekDayDoc = await db.collection('WeekDays').doc(diaSemana).get();
+    let precioMinimo = null;
+    if (weekDayDoc.exists && weekDayDoc.data().clubs && weekDayDoc.data().clubs[clubName] && weekDayDoc.data().clubs[clubName].precio) {
+      precioMinimo = parseFloat(weekDayDoc.data().clubs[clubName].precio);
+    }
+    if (precioMinimo == null || isNaN(precioMinimo)) {
+      spinner.classList.add('hidden');
+      alert('No se pudo validar el precio mínimo del club. Contacta con el administrador.');
+      return;
+    }
+    const suma = parseFloat(el.impPag.value) + parseFloat(el.impPro.value);
+    const pax = parseInt(el.pax.value) || 1;
+    const precioPorPersona = suma / pax;
+    if (precioPorPersona < precioMinimo) {
+      spinner.classList.add('hidden');
+      alert(`El precio por persona (${precioPorPersona.toFixed(2)}€) es inferior al mínimo permitido por el club (${precioMinimo}€). Corrige los importes.`);
+      return;
+    }
+
+    // --- FIN VALIDACIÓN ---
   const fechaTxt = new Date(el.fecha.value).toLocaleDateString('es-ES',{weekday:'short', day:'numeric', month:'long'});
   const map = {
     resFecha   : fechaTxt,
@@ -334,6 +390,7 @@ function mostrarResumen(el){
     resMovil   : el.movil.value
   };
   Object.entries(map).forEach(([id,val])=>{ const e=$("#"+id); if(e) e.textContent = val; });
+  console.log('[Formulario] Mostrando resumen de reserva:', map);
 
   $('#reservaForm').classList.add('hidden');
   $('#resumenReserva').classList.remove('hidden');
@@ -341,6 +398,7 @@ function mostrarResumen(el){
 
 async function enviarReserva(el, spinner, success, resumen){
   spinner.classList.remove('hidden');
+  console.log('[Formulario] Enviando reserva...');
 
   try {
     const { db: firebaseDb } = await loadFirebase();
@@ -361,6 +419,9 @@ async function enviarReserva(el, spinner, success, resumen){
       Estado       : 'Pendiente',
       creadoEn     : window.firebase.firestore.FieldValue.serverTimestamp()
     };
+    console.log('[Formulario] Datos a guardar:', data);
+
+
 
     /* grabar en las tres rutas */
     await Promise.all([
@@ -369,9 +430,41 @@ async function enviarReserva(el, spinner, success, resumen){
       firebaseDb.collection('reservas_por_promotor').doc(data.PromotorUid).collection('reservas').doc(id).set(data)
     ]);
 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJSZWWiidAOgs3HxCOiSQPaNyqdygjPUGF5-REGzx3pV-ylYw9Pi4BAGAFDGHEtqZ4GA/exec";
+
+    // Formatea la fecha en los tres formatos que necesitas
+    const fechaFormateada = {
+      human: fechaObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+      iso: el.fecha.value, // YYYY-MM-DD del input
+      timestamp: fechaObj.getTime()
+    };
+
+    const cleanMovil = el.movil.value.replace(/\D/g, '');
+
+    const reserva = {
+      promoterName: localStorage.getItem('nombre'),
+      fecha: fechaFormateada.human,
+      fechaISO: fechaFormateada.iso,
+      fechaTimestamp: fechaFormateada.timestamp,
+      club: el.club.value,
+      nombreCliente: el.nombre.value,
+      paxTotal: +el.pax.value,
+      importePagar: +el.impPag.value,
+      importePagadoPromotor: +el.impPro.value,
+      emailCliente: el.email.value,
+      movilCliente: cleanMovil
+    };
+
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ accion: 'guardarReserva', reserva }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+
     spinner.classList.add('hidden');
     resumen.classList.add('hidden');
     success.classList.remove('hidden');
+    console.log('[Formulario] Reserva guardada correctamente.');
 
     timers.push(setTimeout(()=>{ success.classList.add('hidden'); },1500));
     timers.push(setTimeout(()=>{ init(); },1700));             // reiniciar wizard

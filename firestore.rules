@@ -2,9 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
-    }
+    
 
 
     // --- Funciones de Ayuda (Helpers) ---
@@ -41,9 +39,13 @@ service cloud.firestore {
       // CREAR: Un usuario solo puede crear su propio documento de perfil.
       // Se valida que los campos iniciales sean los correctos para el flujo de registro.
       allow create: if isSelf(userId) &&
-                      request.resource.data.keys().hasAll(['uid', 'correo', 'rol', 'estado', 'fechaRegistro', 'permisos']) &&
-                      request.resource.data.uid == request.auth.uid &&
-                      request.resource.data.estado == 'Pendiente';
+                request.resource.data.keys().hasAll([
+                  'uid','nombre','correo','rol','estado','fechaRegistro','permisos'
+                ]) &&
+                request.resource.data.permisos.admin == false &&   // ⬅️  nunca admin al crear
+                request.resource.data.rol == 'promotor' &&          // ⬅️  rol fijo
+                request.resource.data.uid  == request.auth.uid &&
+                request.resource.data.estado == 'Pendiente';
 
       // ACTUALIZAR: Un usuario puede actualizar su propio perfil (p. ej., para añadir el nombre).
       // Un admin también puede actualizar cualquier perfil.
@@ -58,6 +60,14 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin(); // Solo admin crea/edita/borra clubs
     }
+
+    // --- Colección de Productos (/Productos) ---
+match /Productos/{productoId} {
+  // Leer: cualquier usuario autenticado puede leer productos
+  allow read: if isSignedIn();
+  // Escribir: solo admin puede crear, actualizar o borrar productos
+  allow write: if isAdmin();
+}
 
     // --- Colección de Días de la Semana (/WeekDays) ---
     match /WeekDays/{day} {

@@ -123,6 +123,27 @@
 </head>
 
 <body class="bg-gray-50 text-gray-800">
+  <!-- Overlay de carga para usuarios pendientes -->
+  <div id="pendingOverlay" style="display:none;position:fixed;z-index:9999;inset:0;background:rgba(0,0,0,0.85);color:white;align-items:center;justify-content:center;flex-direction:column;gap:1.5em;font-size:1.3em;">
+    <div class="spinner-border text-light mb-3" style="width:3rem;height:3rem;"></div>
+  </div>
+  <script>
+    // Mostrar overlay al cargar
+    window.addEventListener('DOMContentLoaded', function() {
+      const overlay = document.getElementById('pendingOverlay');
+      if (overlay) overlay.style.display = 'flex';
+      // Cuando el usuario está aprobado, ocultar overlay
+      if (window.firebase && window.firebase.auth && window.firebase.firestore) {
+        window.firebase.auth().onAuthStateChanged(async user => {
+          if (!user) return;
+          const snap = await window.firebase.firestore().collection('usuarios').doc(user.uid).get();
+          if (snap.exists && snap.data().estado === 'Aprobado') {
+            if (overlay) overlay.style.display = 'none';
+          }
+        });
+      }
+    });
+  </script>
   <!-- HEADER -->
   <header class="fixed top-0 left-0 w-full z-40 flex justify-between items-center px-4 py-3 bg-white shadow-md border-b">
     <div class="flex items-center space-x-3">

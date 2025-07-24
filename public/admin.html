@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -11,19 +10,74 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-  <style>
-    .logo-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; font-weight: 500; }
-    .card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-    .status-badge { font-size: 0.75em; padding: 0.25em 0.5em; }
-    .user-actions { gap: 0.5rem; }
-    .admin-stats { background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); }
-    .token-display { font-family: 'Courier New', monospace; font-size: 0.8em; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; word-break: break-all; }
-    .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-    .modal-header .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
-    .form-check-label small { font-size: 0.8em; }
-    .table th { background-color: #f8f9fa; font-weight: 600; }
-    .badge { font-size: 0.8em; }
-  </style>
+    <style>
+      .logo-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; font-weight: 500; }
+      .card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+      .status-badge { font-size: 0.75em; padding: 0.25em 0.5em; }
+      .user-actions { gap: 0.5rem; }
+      .admin-stats { background: linear-gradient(135deg, #ff6b6b 0%, #feca57 100%); }
+      .token-display { font-family: 'Courier New', monospace; font-size: 0.8em; background: #f8f9fa; padding: 0.5rem; border-radius: 4px; word-break: break-all; }
+      .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+      .modal-header .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+      .form-check-label small { font-size: 0.8em; }
+      .table th { background-color: #f8f9fa; font-weight: 600; }
+      .badge { font-size: 0.8em; }
+
+      /* --- iPhone/iOS style for accordion blocks --- */
+      .accordion#adminAccordion {
+        background: none;
+      }
+      .accordion#adminAccordion .accordion-item {
+        background: #fff;
+        border-radius: 18px;
+        box-shadow: 0 2px 8px 0 rgba(0,0,0,0.07), 0 1px 2px 0 rgba(0,0,0,0.03);
+        margin-bottom: 0.7rem;
+        border: none;
+        overflow: hidden;
+        transition: box-shadow 0.2s;
+      }
+      .accordion#adminAccordion .accordion-item:active,
+      .accordion#adminAccordion .accordion-item:focus-within {
+        box-shadow: 0 8px 24px 0 rgba(0,0,0,0.13), 0 2px 8px 0 rgba(0,0,0,0.07);
+      }
+      .accordion#adminAccordion .accordion-header {
+        border: none;
+        background: none;
+      }
+      .accordion#adminAccordion .accordion-button {
+        border: none;
+        border-radius: 22px 22px 0 0;
+        background: #f7f7fa;
+        font-size: 1.13rem;
+        font-weight: 500;
+        color: #222;
+        padding: 1.1rem 1.5rem;
+        box-shadow: none;
+        outline: none;
+        transition: background 0.2s;
+      }
+      .accordion#adminAccordion .accordion-button:not(.collapsed) {
+        background: #f0f4ff;
+        color: #3a3a3a;
+        box-shadow: none;
+      }
+      .accordion#adminAccordion .accordion-body {
+        background: #fff;
+        border-radius: 0 0 22px 22px;
+        padding: 1.5rem 1.5rem 1.2rem 1.5rem;
+      }
+      @media (max-width: 600px) {
+        .accordion#adminAccordion .accordion-item {
+          border-radius: 12px;
+          margin-bottom: 0.45rem;
+        }
+        .accordion#adminAccordion .accordion-button,
+        .accordion#adminAccordion .accordion-body {
+          padding-left: 0.8rem;
+          padding-right: 0.8rem;
+        }
+      }
+    </style>
   
   <!-- Cache busting para scripts -->
   <script>
@@ -148,235 +202,317 @@
 
   <div class="container mt-4">
 
-    <!-- Panel Admin de Usuarios -->
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="mb-0">
-          <i data-lucide="key" class="me-2"></i>
-          🔔 Tu Token de Admin (Para notificaciones push)
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="mb-3">
-          <label class="form-label">Token actual:</label>
-          <div id="adminTokenDisplay" class="token-display">
-            <span class="text-muted">Presiona el botón para obtener tu token...</span>
+
+    <!-- ACCORDION PRINCIPAL -->
+    <div class="accordion" id="adminAccordion">
+      <!-- Panel Admin de Usuarios (Token) -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingToken">
+          <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseToken" aria-expanded="true" aria-controls="collapseToken">
+            <i data-lucide="key" class="me-2"></i> 🔔 Tu Token de Admin (Para notificaciones push)
+          </button>
+        </h2>
+        <div id="collapseToken" class="accordion-collapse collapse show" aria-labelledby="headingToken" data-bs-parent="#adminAccordion">
+          <div class="accordion-body">
+            <div class="mb-3">
+              <label class="form-label">Token actual:</label>
+              <div id="adminTokenDisplay" class="token-display">
+                <span class="text-muted">Presiona el botón para obtener tu token...</span>
+              </div>
+            </div>
+            <button id="getTokenBtn" class="btn btn-primary me-2">
+              <i data-lucide="refresh-ccw" class="me-1"></i>
+              Obtener Token
+            </button>
+            <button id="copyTokenBtn" class="btn btn-outline-secondary">
+              <i data-lucide="copy" class="me-1"></i>
+              Copiar Token
+            </button>
           </div>
         </div>
-        <button id="getTokenBtn" class="btn btn-primary me-2">
-          <i data-lucide="refresh-ccw" class="me-1"></i>
-          Obtener Token
-        </button>
-        <button id="copyTokenBtn" class="btn btn-outline-secondary">
-          <i data-lucide="copy" class="me-1"></i>
-          Copiar Token
-        </button>
       </div>
-    </div>
 
-    <!-- Gestión de Clubs -->
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="mb-0">
-          <i data-lucide="building" class="me-2"></i>
-          Gestión de Clubs
-        </h5>
-      </div>
-      <div class="card-body">
-        <!-- Botón para agregar nuevo club -->
-        <div class="mb-3">
-          <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addClubModal">
-            <i data-lucide="plus" class="me-1"></i>
-            Agregar Nuevo Club
+      <!-- Gestión de Clubs -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingClubs">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseClubs" aria-expanded="false" aria-controls="collapseClubs">
+            <i data-lucide="building" class="me-2"></i> Gestión de Clubs
           </button>
-        </div>
-        
-        <!-- Tabla de clubs -->
-        <div class="table-responsive">
-          <table class="table table-striped">
-            <thead>
-              <tr>
-        <th>Nombre</th>
-        <th>Disponibilidad</th>
-        <th>Full Ticket</th>
-        <th>Pre-Sale</th>
-        <th>Estado</th>
-        <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="clubsTable">
-              <tr>
-                <td colspan="7" class="text-center">
-                  <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando clubs...</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        </h2>
+        <div id="collapseClubs" class="accordion-collapse collapse" aria-labelledby="headingClubs" data-bs-parent="#adminAccordion">
+          <div class="accordion-body">
+            <!-- Botón para agregar nuevo club -->
+            <div class="mb-3">
+              <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addClubModal">
+                <i data-lucide="plus" class="me-1"></i>
+                Agregar Nuevo Club
+              </button>
+            </div>
+            <!-- Tabla de clubs -->
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Disponibilidad</th>
+                    <th>Full Ticket</th>
+                    <th>Pre-Sale</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="clubsTable">
+                  <tr>
+                    <td colspan="7" class="text-center">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando clubs...</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-
-
-    <!-- Agrega esto donde quieras mostrar la nueva tabla -->
-<div class="card mt-4">
-  <div class="card-header">
-    <h5 class="mb-0">
-      <i data-lucide="calendar-days" class="me-2"></i>
-      Week Schedule
-    </h5>
-  </div>
-  <div class="card-body">
-    <div class="table-responsive">
-      <table class="table table-striped align-middle">
-        <thead>
-          <tr>
-            <th>Día</th>
-            <th>Clubs</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="weekScheduleTable">
-          <tr>
-            <td colspan="3" class="text-center">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Cargando horarios...</span>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-    <!-- Gestión de Usuarios -->
-    <div class="card">
-      <div class="card-header">
-        <h5 class="mb-0">
-          <i data-lucide="users" class="me-2"></i>
-          Gestión de Usuarios
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-striped">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th>Fecha Registro</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="usuariosTable">
-              <tr>
-                <td colspan="6" class="text-center">
-                  <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando usuarios...</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal para agregar nuevo club -->
-  <div class="modal fade" id="addClubModal" tabindex="-1" aria-labelledby="addClubModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="addClubModalLabel">
-            <i data-lucide="plus-circle" class="me-2"></i>
-            Agregar Nuevo Club
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form id="addClubForm">
-            <div class="row">
-              <div class="col-md-12">
-                <div class="mb-3">
-                  <label for="clubNombre" class="form-label">Nombre del Club *</label>
-                  <input type="text" class="form-control" id="clubNombre" required>
-                </div>
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label for="clubDisponibilidad" class="form-label">Disponibilidad *</label>
-              <select class="form-select" id="clubDisponibilidad" required>
-                <option value="">Seleccionar disponibilidad</option>
-                <option value="siempre">Siempre disponible</option>
-                <option value="lunes">Solo Lunes</option>
-                <option value="martes">Solo Martes</option>
-                <option value="miércoles">Solo Miércoles</option>
-                <option value="jueves">Solo Jueves</option>
-                <option value="viernes">Solo Viernes</option>
-                <option value="sábado">Solo Sábado</option>
-                <option value="domingo">Solo Domingo</option>
-                <option value="fin_semana">Fin de Semana (Viernes-Sábado)</option>
-                <option value="entre_semana">Entre Semana (Lunes-Jueves)</option>
-              </select>
-            </div>
-
-            <div class="row">
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="clubFullTicket">
-                    <label class="form-check-label" for="clubFullTicket">
-                      <strong>Full Ticket</strong>
-                      <br><small class="text-muted">Entrada completa sin pago adicional</small>
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="clubPreSale">
-                    <label class="form-check-label" for="clubPreSale">
-                      <strong>Pre-Sale</strong>
-                      <br><small class="text-muted">Venta anticipada con descuento</small>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label for="clubDescripcion" class="form-label">Descripción (opcional)</label>
-              <textarea class="form-control" id="clubDescripcion" rows="3" placeholder="Breve descripción del club..."></textarea>
-            </div>
-
-            <div class="mb-3">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="clubActivo" checked>
-                <label class="form-check-label" for="clubActivo">
-                  <strong>Club Activo</strong>
-                  <br><small class="text-muted">Desmarcar para desactivar temporalmente</small>
-                </label>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-success" onclick="saveNewClub()">
-            <i data-lucide="save" class="me-1"></i>
-            Guardar Club
+      <!-- Week Schedule -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingWeek">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseWeek" aria-expanded="false" aria-controls="collapseWeek">
+            <i data-lucide="calendar-days" class="me-2"></i> Week Schedule
           </button>
+        </h2>
+        <div id="collapseWeek" class="accordion-collapse collapse" aria-labelledby="headingWeek" data-bs-parent="#adminAccordion">
+          <div class="accordion-body">
+            <div class="table-responsive">
+              <table class="table table-striped align-middle">
+                <thead>
+                  <tr>
+                    <th>Día</th>
+                    <th>Clubs</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="weekScheduleTable">
+                  <tr>
+                    <td colspan="3" class="text-center">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando horarios...</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gestión de Usuarios -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingUsuarios">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUsuarios" aria-expanded="false" aria-controls="collapseUsuarios">
+            <i data-lucide="users" class="me-2"></i> Gestión de Usuarios
+          </button>
+        </h2>
+        <div id="collapseUsuarios" class="accordion-collapse collapse" aria-labelledby="headingUsuarios" data-bs-parent="#adminAccordion">
+          <div class="accordion-body">
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Fecha Registro</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="usuariosTable">
+                  <tr>
+                    <td colspan="6" class="text-center">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando usuarios...</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gestión de Productos -->
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingProductos">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProductos" aria-expanded="false" aria-controls="collapseProductos">
+            <i data-lucide="package" class="me-2"></i> Gestión de Productos
+          </button>
+        </h2>
+        <div id="collapseProductos" class="accordion-collapse collapse" aria-labelledby="headingProductos" data-bs-parent="#adminAccordion">
+          <div class="accordion-body">
+            <div class="mb-3">
+              <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductoModal">
+                <i data-lucide="plus" class="me-1"></i>
+                Añadir Producto
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Sub-Productos</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="productosTable">
+                  <tr>
+                    <td colspan="3" class="text-center">
+                      <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando productos...</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Modal para agregar nuevo club -->
+    <div class="modal fade" id="addClubModal" tabindex="-1" aria-labelledby="addClubModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addClubModalLabel">
+              <i data-lucide="plus-circle" class="me-2"></i>
+              Agregar Nuevo Club
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="addClubForm">
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="mb-3">
+                    <label for="clubNombre" class="form-label">Nombre del Club *</label>
+                    <input type="text" class="form-control" id="clubNombre" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="clubDisponibilidad" class="form-label">Disponibilidad *</label>
+                <select class="form-select" id="clubDisponibilidad" required>
+                  <option value="">Seleccionar disponibilidad</option>
+                  <option value="siempre">Siempre disponible</option>
+                  <option value="lunes">Solo Lunes</option>
+                  <option value="martes">Solo Martes</option>
+                  <option value="miércoles">Solo Miércoles</option>
+                  <option value="jueves">Solo Jueves</option>
+                  <option value="viernes">Solo Viernes</option>
+                  <option value="sábado">Solo Sábado</option>
+                  <option value="domingo">Solo Domingo</option>
+                  <option value="fin_semana">Fin de Semana (Viernes-Sábado)</option>
+                  <option value="entre_semana">Entre Semana (Lunes-Jueves)</option>
+                </select>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="clubFullTicket">
+                      <label class="form-check-label" for="clubFullTicket">
+                        <strong>Full Ticket</strong>
+                        <br><small class="text-muted">Entrada completa sin pago adicional</small>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="clubPreSale">
+                      <label class="form-check-label" for="clubPreSale">
+                        <strong>Pre-Sale</strong>
+                        <br><small class="text-muted">Venta anticipada con descuento</small>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="clubDescripcion" class="form-label">Descripción (opcional)</label>
+                <textarea class="form-control" id="clubDescripcion" rows="3" placeholder="Breve descripción del club..."></textarea>
+              </div>
+
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="clubActivo" checked>
+                  <label class="form-check-label" for="clubActivo">
+                    <strong>Club Activo</strong>
+                    <br><small class="text-muted">Desmarcar para desactivar temporalmente</small>
+                  </label>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-success" onclick="saveNewClub()">
+              <i data-lucide="save" class="me-1"></i>
+              Guardar Club
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para agregar nuevo producto -->
+    <div class="modal fade" id="addProductoModal" tabindex="-1" aria-labelledby="addProductoModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addProductoModalLabel">
+              <i data-lucide="plus-circle" class="me-2"></i>
+              Añadir Producto
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="addProductoForm">
+              <div class="mb-3">
+                <label for="productoNombre" class="form-label">Nombre del Producto *</label>
+                <input type="text" class="form-control" id="productoNombre" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Sub-Productos</label>
+                <div id="subProductosList"></div>
+                <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addSubProductoBtn">
+                  <i data-lucide="plus"></i> Añadir Sub-Producto
+                </button>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-success" id="saveProductoBtn">
+              <i data-lucide="save" class="me-1"></i>
+              Guardar Producto
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Bootstrap JS -->
@@ -627,6 +763,24 @@ function displayClubs(lista) {
   lucide?.createIcons?.();
 }
 
+
+
+// --- FUNCIONES PARA ACCIONES DE CLUBS ---
+function editClub(id) {
+  alert('Función editar club próximamente. ID: ' + id);
+}
+function deleteClub(id) {
+  if (confirm('¿Seguro que quieres eliminar este club?')) {
+    db.collection('clubs').doc(id).delete().then(() => {
+      loadClubs();
+      alert('Club eliminado correctamente');
+    }).catch(err => {
+      alert('Error eliminando club');
+      console.error(err);
+    });
+  }
+}
+
 function badge(text, color) {
   return `<span class="badge bg-${color}">${text}</span>`;
 }
@@ -769,7 +923,129 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Cargar productos al iniciar
+  loadProductos();
 });
+
+// Productos Firestore CRUD
+async function loadProductos() {
+  try {
+    const snapshot = await db.collection('Productos').get();
+    const productos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    displayProductos(productos);
+  } catch (err) {
+    console.error('Error cargando productos:', err);
+    document.getElementById('productosTable').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error cargando productos</td></tr>';
+  }
+}
+
+function displayProductos(lista) {
+  const table = document.getElementById('productosTable');
+  if (lista.length === 0) {
+    table.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No hay productos</td></tr>';
+    return;
+  }
+  table.innerHTML = lista.map(p => {
+    const subProds = p.subProductos ? Object.keys(p.subProductos).map(k => `<span class='badge bg-info me-1'>${k}</span>`).join('') : '<span class="text-muted">N/A</span>';
+    return `<tr>
+      <td><strong>${p.nombre || 'N/A'}</strong></td>
+      <td>${subProds}</td>
+      <td><!-- Acciones futuras --></td>
+    </tr>`;
+  }).join('');
+  lucide?.createIcons?.();
+}
+
+// Modal Sub-Productos
+let subProductos = {};
+function renderSubProductos() {
+  const list = document.getElementById('subProductosList');
+  list.innerHTML = Object.keys(subProductos).length === 0
+    ? '<span class="text-muted">Sin sub-productos</span>'
+    : Object.entries(subProductos).map(([k,v]) => `
+      <div class="input-group mb-2">
+        <input type="text" class="form-control form-control-sm" value="${k}" readonly>
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeSubProducto('${k}')"><i data-lucide='trash-2'></i></button>
+      </div>`).join('');
+  lucide?.createIcons?.();
+}
+window.removeSubProducto = function(k) {
+  delete subProductos[k];
+  renderSubProductos();
+}
+document.getElementById('addSubProductoBtn').addEventListener('click', function() {
+  const nombre = prompt('Nombre del sub-producto:');
+  if (nombre && !subProductos[nombre]) {
+    subProductos[nombre] = true;
+    renderSubProductos();
+  }
+});
+
+document.getElementById('saveProductoBtn').addEventListener('click', async function() {
+  const nombre = document.getElementById('productoNombre').value.trim();
+  if (!nombre) return alert('El nombre es obligatorio');
+  try {
+    await db.collection('Productos').add({ nombre, subProductos });
+    subProductos = {};
+    document.getElementById('addProductoForm').reset();
+    renderSubProductos();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('addProductoModal')).hide();
+    await loadProductos();
+    alert('Producto guardado');
+  } catch (err) {
+    alert('Error guardando producto');
+    console.error(err);
+  }
+});
+
+
+// --- GUARDAR NUEVO CLUB DESDE EL MODAL ---
+async function saveNewClub() {
+  const nombre = document.getElementById('clubNombre').value.trim();
+  const disponibilidadSel = document.getElementById('clubDisponibilidad').value;
+  const fullTicket = document.getElementById('clubFullTicket').checked;
+  const preSale = document.getElementById('clubPreSale').checked;
+  const descripcion = document.getElementById('clubDescripcion').value.trim();
+  const activo = document.getElementById('clubActivo').checked;
+
+  if (!nombre) return alert('El nombre del club es obligatorio');
+  if (!disponibilidadSel) return alert('Selecciona la disponibilidad');
+
+  // Construir disponibilidad como objeto de días
+  let disponibilidad = {};
+  if (disponibilidadSel === 'siempre') {
+    disponibilidad = { lunes:true, martes:true, miércoles:true, jueves:true, viernes:true, sábado:true, domingo:true };
+  } else if (disponibilidadSel === 'fin_semana') {
+    disponibilidad = { viernes:true, sábado:true };
+  } else if (disponibilidadSel === 'entre_semana') {
+    disponibilidad = { lunes:true, martes:true, miércoles:true, jueves:true };
+  } else {
+    // Solo un día
+    disponibilidad[disponibilidadSel] = true;
+  }
+
+  const clubData = {
+    nombre,
+    disponibilidad,
+    fullTicket,
+    preSale,
+    descripcion,
+    activo,
+    fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  try {
+    await db.collection('clubs').add(clubData);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('addClubModal')).hide();
+    document.getElementById('addClubForm').reset();
+    await loadClubs();
+    alert('Club guardado correctamente');
+  } catch (err) {
+    alert('Error guardando club');
+    console.error(err);
+  }
+}
 </script>
 
 </body>

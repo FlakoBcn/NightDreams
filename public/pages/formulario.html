@@ -1,8 +1,39 @@
-<h2 class="text-2xl font-semibold mb-4">Nueva Reserva</h2>
-<!-- Estilos globales -->
-<link rel="stylesheet" href="../styles/main.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
 
+
+<style>
+body.ios .form-control, body.ios input, body.ios select, body.ios button {
+  font-size: 1.08em;
+  border-radius: 18px !important;
+  box-shadow: 0 2px 8px 0 rgba(80,80,160,0.07);
+}
+body.android .form-control, body.android input, body.android select, body.android button {
+  font-size: 1em;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 4px 0 rgba(60,60,60,0.06);
+}
+body.ios #reservaForm, body.ios #resumenReserva {
+  background: #f8fafc;
+}
+body.android #reservaForm, body.android #resumenReserva {
+  background: #f4f6fb;
+}
+body.ios legend, body.ios label { color: #3b3b7a; }
+body.android legend, body.android label { color: #2d3748; }
+</style>
+<script>
+(function(){
+  function getMobileOS() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    if (/android/i.test(ua)) return 'android';
+    if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) return 'ios';
+    return 'other';
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    document.body.classList.add(getMobileOS());
+  });
+})();
+</script>
+<h2 class="text-2xl font-semibold mb-4">Nueva Reserva</h2>
 <form id="reservaForm" class="space-y-6">
   <fieldset id="q-fecha" class="question">
     <legend class="font-medium">Fecha</legend>
@@ -29,9 +60,14 @@
   <fieldset id="q-ticketType" class="question disabled-question" aria-disabled="true">
     <legend class="font-medium">Tipo de entrada</legend>
     <div class="flex space-x-2">
-      <button type="button" id="btnFullTicket" disabled class="px-4 py-2 border rounded pointer-events-none disabled:opacity-50">Full Ticket</button>
-      <button type="button" id="btnPreSale" disabled class="px-4 py-2 border rounded pointer-events-none disabled:opacity-50">Pre-Sale</button>
+      <button type="button" id="btnFullTicket" disabled class="px-4 py-2 border rounded disabled:opacity-50">Full Ticket</button>
+      <button type="button" id="btnPreSale" disabled class="px-4 py-2 border rounded disabled:opacity-50">Pre-Sale</button>
     </div>
+  </fieldset>
+
+  <fieldset id="q-importePagado" class="question disabled-question" aria-disabled="true">
+    <legend class="font-medium">Importe pagado al promotor (€)</legend>
+    <input type="number" id="importePagadoPromotor" min="0" step="0.01" required disabled class="w-full border rounded px-3 py-2 cursor-not-allowed" placeholder="0.00" />
   </fieldset>
 
   <fieldset id="q-importePagar" class="question disabled-question" aria-disabled="true">
@@ -39,10 +75,7 @@
     <input type="number" id="importePagar" min="0" step="0.01" required disabled class="w-full border rounded px-3 py-2 cursor-not-allowed" placeholder="0.00" />
   </fieldset>
 
-  <fieldset id="q-importePagado" class="question disabled-question" aria-disabled="true">
-    <legend class="font-medium">Importe pagado al promotor (€)</legend>
-    <input type="number" id="importePagadoPromotor" min="0" step="0.01" required disabled class="w-full border rounded px-3 py-2 cursor-not-allowed" placeholder="0.00" />
-  </fieldset>
+  
 
   <fieldset id="q-email" class="question disabled-question" aria-disabled="true">
     <legend class="font-medium">Email del cliente</legend>

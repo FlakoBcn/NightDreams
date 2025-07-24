@@ -150,27 +150,36 @@
     });
 
     // Activar notificaciones
-    document.getElementById('activarNotifBtn').addEventListener('click', async () => {
+    const activarNotifBtn = document.getElementById('activarNotifBtn');
+    activarNotifBtn.addEventListener('click', async () => {
       try {
         if (!messaging) {
           alert('Tu navegador no soporta notificaciones push');
           return;
         }
 
+        // Mostrar spinner y deshabilitar botón
+        activarNotifBtn.disabled = true;
+        activarNotifBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Esperando Service Worker...';
+        document.getElementById('tokenStatus').innerHTML = '<span class="text-primary">🔄 Esperando Service Worker...</span>';
+
+        // Esperar a que el Service Worker esté ready
+        await navigator.serviceWorker.ready;
+
+        // Ahora pedir permiso y token
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
+          activarNotifBtn.disabled = false;
+          activarNotifBtn.innerHTML = '<i data-lucide="bell-ring" class="me-2" style="width: 18px; height: 18px;"></i> Activar Notificaciones';
           alert('Necesitas dar permiso para las notificaciones');
           return;
         }
 
-        document.getElementById('tokenStatus').innerHTML = 
-          '<span class="text-primary">🔄 Generando token...</span>';
+        document.getElementById('tokenStatus').innerHTML = '<span class="text-primary">🔄 Generando token...</span>';
+        activarNotifBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generando token...';
 
         const token = await messaging.getToken({ vapidKey: VAPID_KEY });
-        
-        if (!token) {
-          throw new Error('No se pudo generar el token');
-        }
+        if (!token) throw new Error('No se pudo generar el token');
 
         // Guardar token en Firestore
         const user = auth.currentUser;
@@ -183,20 +192,20 @@
         document.getElementById('tokenStatus').innerHTML = 
           `<span class="text-success">✅ Notificaciones activadas</span><br>
            <small class="text-muted">Te avisaremos cuando seas aprobado</small>`;
-        
-        document.getElementById('activarNotifBtn').innerHTML = 
-          `<i data-lucide="check-circle" class="me-2" style="width: 18px; height: 18px;"></i>
-           Notificaciones Activas`;
-        document.getElementById('activarNotifBtn').disabled = true;
-        document.getElementById('activarNotifBtn').classList.replace('btn-primary', 'btn-success');
+        activarNotifBtn.innerHTML = `<i data-lucide="check-circle" class="me-2" style="width: 18px; height: 18px;"></i> Notificaciones Activas`;
+        activarNotifBtn.disabled = true;
+        activarNotifBtn.classList.replace('btn-primary', 'btn-success');
+        lucide.createIcons();
 
         console.log('🔔 Token guardado para promotor pendiente:', token);
         alert('¡Notificaciones activadas! Te avisaremos cuando seas aprobado.');
 
       } catch (error) {
         console.error('Error activando notificaciones:', error);
-        document.getElementById('tokenStatus').innerHTML = 
-          '<span class="text-danger">❌ Error activando notificaciones</span>';
+        document.getElementById('tokenStatus').innerHTML = '<span class="text-danger">❌ Error activando notificaciones</span>';
+        activarNotifBtn.disabled = false;
+        activarNotifBtn.innerHTML = '<i data-lucide="bell-ring" class="me-2" style="width: 18px; height: 18px;"></i> Activar Notificaciones';
+        lucide.createIcons();
         alert('Error activando notificaciones: ' + error.message);
       }
     });

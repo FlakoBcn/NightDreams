@@ -110,6 +110,15 @@
 
   
 <script>
+   // Mostrar el formulario o el banner PWA lo antes posible
+   auth.onAuthStateChanged(user => {
+     if (!isStandaloneMode()) {
+       showBanner();
+     } else {
+       showForm();
+     }
+   });
+
    document.addEventListener('DOMContentLoaded', () => {
       const form = document.getElementById('registroForm');
       const resultado = document.getElementById('resultado');
@@ -123,13 +132,13 @@
         return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
       }
       
-        function showBanner() {
-        pwaBanner.classList.remove('hide');
-        form.classList.add('hide');
-        cargandoDiv.classList.add('hide');
-      }
+      function showBanner() {
+  pwaBanner.classList.remove('hide');   // ← mostrar
+  form.classList.add('hide');           // ocultar el formulario
+  cargandoDiv.classList.add('hide');
+}
       
-        function showForm() {
+      function showForm() {
         pwaBanner.classList.add('hide');
         form.classList.remove('hide');
         cargandoDiv.classList.add('hide');
@@ -148,79 +157,69 @@
 
       // El listener del formulario se define una sola vez.
       form.addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const submitButton = ev.target.querySelector('button[type="submit"]');
-        submitButton.disabled = true;
-        resultado.innerHTML = '<div class="alert alert-secondary">Procesando…</div>';
+  ev.preventDefault();
+  const submitBtn = ev.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  resultado.innerHTML = '<div class="alert alert-secondary">Procesando…</div>';
 
-        const nombre = document.getElementById('nombre').value.trim();
-        const email = document.getElementById('correo').value.trim().toLowerCase();
-        const password = document.getElementById('password').value;
-        const isAdmin = email === 'official.nightdreams@gmail.com';
-      
-        try {
-          let cred;
-          try {
-            // 1. Intenta CREAR el usuario primero.
-            cred = await auth.createUserWithEmailAndPassword(email, password);
-            await cred.user.updateProfile({ displayName: nombre });
-          } catch (error) {
-            // 2. Si el correo ya existe, intenta iniciar sesión.
-            if (error.code === 'auth/email-already-in-use') {
-              cred = await auth.signInWithEmailAndPassword(email, password);
-            } else {
-              // Lanza otros errores de creación (ej. contraseña débil)
-              throw error;
-            }
-          }
+  const nombre   = document.getElementById('nombre').value.trim();
+  const email    = document.getElementById('correo').value.trim().toLowerCase();
+  const password = document.getElementById('password').value;
 
-          const ref = db.collection('usuarios').doc(cred.user.uid);
-          const snap = await ref.get();
-          const destino = isAdmin || (snap.exists && snap.data().estado === "Aprobado") ? 'index.html' : 'espera.html';
+  let cred;
+  let esNuevo = false;
 
-          if (cred.additionalUserInfo?.isNewUser) {
-            await db.collection('usuarios').doc(cred.user.uid).set({
-              nombre: nombre,
-              correo: email,
-              rol: isAdmin ? 'admin' : 'promotor',
-              estado: isAdmin ? 'Aprobado' : 'Pendiente',
-              fechaRegistro: firebase.firestore.FieldValue.serverTimestamp(),
-              permisos: {
-                admin: isAdmin,
-                eliminar: isAdmin,
-                modificar: true,
-                ver_todo: isAdmin
-              }
-            });
-            console.log('Documento Firestore creado para UID:', cred.user.uid);
-          }
-          
-          resultado.innerHTML = `<div class="alert alert-success">¡${isAdmin ? 'Admin' : 'Operación exitosa'}! Redirigiendo…</div>`;
-          setTimeout(() => location.replace(destino), 1200);
+  try {
+    // 1. Registro → si el correo ya existe pasamos al login
+    try {
+      cred = await auth.createUserWithEmailAndPassword(email, password);
+      esNuevo = true;
+      await cred.user.updateProfile({ displayName: nombre });
+    } catch (err) {
+      if (err.code === 'auth/email-already-in-use') {
+        cred = await auth.signInWithEmailAndPassword(email, password);
+      } else {
+        throw err;
+      }
+    }
 
-        } catch (err) {
-          console.error("Error en registro/acceso:", err);
-          let mensajeError = 'Ocurrió un error inesperado.';
-          switch (err.code) {
-            case 'auth/wrong-password':
-              mensajeError = 'La contraseña es incorrecta. Inténtalo de nuevo.';
-              break;
-            case 'auth/invalid-email':
-              mensajeError = 'El formato del correo electrónico no es válido.';
-              break;
-            case 'auth/email-already-in-use':
-              mensajeError = 'Este correo ya está registrado. Intenta acceder.';
-              break;
-            case 'auth/weak-password':
-              mensajeError = 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres.';
-              break;
-            default:
-              mensajeError = err.message;
-          }
-          resultado.innerHTML = `<div class="alert alert-danger">❌ ${mensajeError}</div>`;
-          submitButton.disabled = false;
+    // 2. Documento Firestore solo si es nuevo
+    const uid = cred.user.uid;
+    const ref = db.collection('usuarios').doc(uid);
+    if (esNuevo) {
+      await ref.set({
+        uid,
+        nombre,
+        correo : email,
+        rol    : 'promotor',
+        estado : 'Pendiente',
+        fechaRegistro: firebase.firestore.FieldValue.serverTimestamp(),
+        permisos: {
+          admin     : false,
+          eliminar  : false,
+          modificar : true,
+          ver_todo  : false
         }
       });
+    }
+
+    // 3. Decide destino
+    const snap = await ref.get();
+    const destino = (snap.exists && snap.data().estado === 'Aprobado')
+        ? 'index.html'
+        : 'espera.html';
+
+    resultado.innerHTML =
+      '<div class="alert alert-success">¡Bienvenido! Redirigiendo…</div>';
+    setTimeout(() => location.replace(destino), 1200);
+
+  } catch (err) {
+    submitBtn.disabled = false;
+    resultado.innerHTML =
+      `<div class="alert alert-danger">❌ ${err.message}</div>`;
+    console.error('[AUTH ERROR]', err);
+  }
+});
 
       // Asegurarse de que Firebase Auth está listo antes de mostrar el formulario.
       auth.onAuthStateChanged(user => {
@@ -238,111 +237,4 @@
 </body>
 </html>
 
-    </div>
-  </div>
-
-  
-<script>
-   document.addEventListener('DOMContentLoaded', () => {
-      const form = document.getElementById('registroForm');
-      const resultado = document.getElementById('resultado');
-      
-      // --- CONTROL INSTALACIÓN PWA ---
-      let deferredPrompt;
-
-      function isStandaloneMode() {
-        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-      }
-      
-      function showBanner() {
-        document.getElementById('pwaBanner').classList.remove('hide');
-        document.getElementById('registroForm').classList.add('hide');
-      }
-      
-      function showForm() {
-        document.getElementById('pwaBanner').classList.add('hide');
-        document.getElementById('registroForm').classList.remove('hide');
-      }
-      
-      // Decide si mostrar el banner o el formulario al cargar la página
-      if (!isStandaloneMode()) {
-        showBanner();
-      } else {
-        showForm();
-      }
-      
-      // Listener para capturar el evento de instalación
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        showBanner(); // Muestra el banner si el evento se dispara
-        document.getElementById('btnInstall').onclick = async () => {
-          deferredPrompt.prompt();
-          await deferredPrompt.userChoice;
-          location.reload();
-        };
-      });
-      // --- FIN CONTROL PWA ---
-
-
-      // Asegurarse de que Firebase Auth está listo antes de adjuntar el listener del formulario.
-      auth.onAuthStateChanged(user => {
-        if (!form.dataset.listenerAttached) {
-          form.addEventListener('submit', async (ev) => {
-            ev.preventDefault();
-            const submitButton = ev.target.querySelector('button[type="submit"]');
-            submitButton.disabled = true;
-            resultado.innerHTML = '<div class="alert alert-secondary">Procesando…</div>';
-
-            const nombre = document.getElementById('nombre').value.trim();
-            const email = document.getElementById('correo').value.trim().toLowerCase();
-            const password = document.getElementById('password').value;
-            const isAdmin = correo === 'official.nightdreams@gmail.com';
-          
-            try {
-              let cred;
-              try {
-                cred = await auth.signInWithEmailAndPassword(email, password);
-              } catch (err) {
-                if (err.code !== 'auth/user-not-found') throw err;
-                cred = await auth.createUserWithEmailAndPassword(email, password);
-                await cred.user.updateProfile({ displayName: nombre });
-              }
-
-              const ref = db.collection('usuarios').doc(cred.user.uid);
-              const snap = await ref.get();
-              const destino = isAdmin || (snap.exists && snap.data().estado === "Aprobado") ? 'index.html' : 'espera.html';
-
-              if (cred.additionalUserInfo?.isNewUser) {
-                await db.collection('usuarios').doc(cred.user.uid).set({
-                  nombre: nombre,
-                  correo: email,
-                  rol: isAdmin ? 'admin' : 'promotor',
-                  estado: isAdmin ? 'Aprobado' : 'Pendiente',
-                  fechaRegistro: firebase.firestore.FieldValue.serverTimestamp(),
-                  permisos: {
-                    admin: isAdmin,
-                    eliminar: isAdmin,
-                    modificar: true,
-                    ver_todo: isAdmin
-                  }
-                });
-                console.log('Documento Firestore creado para UID:', cred.user.uid);
-              }
-              
-              resultado.innerHTML = `<div class="alert alert-success">¡${isAdmin ? 'Admin' : 'Operación exitosa'}! Redirigiendo…</div>`;
-              setTimeout(() => location.replace(destino), 1200);
-
-            } catch (err) {
-              submitButton.disabled = false;
-              resultado.innerHTML = `<div class="alert alert-danger">❌ ${err.message}</div>`;
-            }
-          });
-          form.dataset.listenerAttached = 'true';
-        }
-      });
-});
-</script>
-
-</body>
-</html>
+    
