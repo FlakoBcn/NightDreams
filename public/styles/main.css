@@ -123,3 +123,8 @@ input, select, button {
 .animate-check {
   animation: pop-check 0.5s ease-out forwards;
 }
+
+/* Sombra hacia arriba para la barra inferior */
+.shadow-t {
+  box-shadow: 0 -4px 16px -4px rgba(0,0,0,0.10);
+}

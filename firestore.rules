@@ -89,6 +89,7 @@ match /Productos/{productoId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isOwner(request.resource);
       allow update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // /reservas_por_promotor/{promotorId}/reservas/{resId}
@@ -97,6 +98,7 @@ match /Productos/{productoId} {
       allow read: if isSelf(promotorId) || isAdmin();
       // Un promotor solo puede crear/modificar/borrar sus propias reservas.
       allow write: if isSelf(promotorId);
+      allow write: if isAdmin();
     }
 
     // --- Otras Colecciones ---
@@ -107,6 +109,7 @@ match /Productos/{productoId} {
       // El promotor objetivo o un admin pueden leer la solicitud.
       allow read: if isSignedIn() && (isSelf(request.resource.data.targetPromotorUid) || isAdmin());
       allow update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // /formulario_config/{doc}

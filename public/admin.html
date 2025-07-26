@@ -66,17 +66,20 @@
         border-radius: 0 0 22px 22px;
         padding: 1.5rem 1.5rem 1.2rem 1.5rem;
       }
-      @media (max-width: 600px) {
-        .accordion#adminAccordion .accordion-item {
-          border-radius: 12px;
-          margin-bottom: 0.45rem;
-        }
-        .accordion#adminAccordion .accordion-button,
-        .accordion#adminAccordion .accordion-body {
-          padding-left: 0.8rem;
-          padding-right: 0.8rem;
-        }
+     @media (max-width: 600px) {
+  input.form-control,
+  select.form-select {
+    font-size: 1rem;
+    padding: 0.8rem 1rem;
+  }
+  .form-check-label {
+    font-size: 1rem;
+  }
+}
+      .form-check-label {
+        font-size: 1rem;
       }
+    
     </style>
   
   <!-- Cache busting para scripts -->
@@ -226,46 +229,41 @@
             </button>
             <button id="copyTokenBtn" class="btn btn-outline-secondary">
               <i data-lucide="copy" class="me-1"></i>
-              Copiar Token
+               Copiar Token
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Gestión de Clubs -->
+      <!-- Gestión de Productos -->
       <div class="accordion-item">
-        <h2 class="accordion-header" id="headingClubs">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseClubs" aria-expanded="false" aria-controls="collapseClubs">
-            <i data-lucide="building" class="me-2"></i> Gestión de Clubs
+        <h2 class="accordion-header" id="headingProductos">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProductos" aria-expanded="false" aria-controls="collapseProductos">
+            <i data-lucide="package" class="me-2"></i> Catalogo NightDreams
           </button>
         </h2>
-        <div id="collapseClubs" class="accordion-collapse collapse" aria-labelledby="headingClubs" data-bs-parent="#adminAccordion">
+        <div id="collapseProductos" class="accordion-collapse collapse" aria-labelledby="headingProductos" data-bs-parent="#adminAccordion">
           <div class="accordion-body">
-            <!-- Botón para agregar nuevo club -->
             <div class="mb-3">
-              <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addClubModal">
+              <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductoModal">
                 <i data-lucide="plus" class="me-1"></i>
-                Agregar Nuevo Club
+                Añadir Producto
               </button>
             </div>
-            <!-- Tabla de clubs -->
             <div class="table-responsive">
               <table class="table table-striped">
                 <thead>
                   <tr>
                     <th>Nombre</th>
-                    <th>Disponibilidad</th>
-                    <th>Full Ticket</th>
-                    <th>Pre-Sale</th>
-                    <th>Estado</th>
+                    <th>Sub-Productos</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
-                <tbody id="clubsTable">
+                <tbody id="productosTable">
                   <tr>
-                    <td colspan="7" class="text-center">
+                    <td colspan="3" class="text-center">
                       <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Cargando clubs...</span>
+                        <span class="visually-hidden">Cargando productos...</span>
                       </div>
                     </td>
                   </tr>
@@ -289,9 +287,8 @@
               <table class="table table-striped align-middle">
                 <thead>
                   <tr>
-                    <th>Día</th>
-                    <th>Clubs</th>
-                    <th>Acciones</th>
+                  
+                
                   </tr>
                 </thead>
                 <tbody id="weekScheduleTable">
@@ -345,136 +342,7 @@
         </div>
       </div>
 
-      <!-- Gestión de Productos -->
-      <div class="accordion-item">
-        <h2 class="accordion-header" id="headingProductos">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProductos" aria-expanded="false" aria-controls="collapseProductos">
-            <i data-lucide="package" class="me-2"></i> Gestión de Productos
-          </button>
-        </h2>
-        <div id="collapseProductos" class="accordion-collapse collapse" aria-labelledby="headingProductos" data-bs-parent="#adminAccordion">
-          <div class="accordion-body">
-            <div class="mb-3">
-              <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addProductoModal">
-                <i data-lucide="plus" class="me-1"></i>
-                Añadir Producto
-              </button>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-striped">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Sub-Productos</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="productosTable">
-                  <tr>
-                    <td colspan="3" class="text-center">
-                      <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Cargando productos...</span>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal para agregar nuevo club -->
-    <div class="modal fade" id="addClubModal" tabindex="-1" aria-labelledby="addClubModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="addClubModalLabel">
-              <i data-lucide="plus-circle" class="me-2"></i>
-              Agregar Nuevo Club
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <form id="addClubForm">
-              <div class="row">
-                <div class="col-md-12">
-                  <div class="mb-3">
-                    <label for="clubNombre" class="form-label">Nombre del Club *</label>
-                    <input type="text" class="form-control" id="clubNombre" required>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label for="clubDisponibilidad" class="form-label">Disponibilidad *</label>
-                <select class="form-select" id="clubDisponibilidad" required>
-                  <option value="">Seleccionar disponibilidad</option>
-                  <option value="siempre">Siempre disponible</option>
-                  <option value="lunes">Solo Lunes</option>
-                  <option value="martes">Solo Martes</option>
-                  <option value="miércoles">Solo Miércoles</option>
-                  <option value="jueves">Solo Jueves</option>
-                  <option value="viernes">Solo Viernes</option>
-                  <option value="sábado">Solo Sábado</option>
-                  <option value="domingo">Solo Domingo</option>
-                  <option value="fin_semana">Fin de Semana (Viernes-Sábado)</option>
-                  <option value="entre_semana">Entre Semana (Lunes-Jueves)</option>
-                </select>
-              </div>
-
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="clubFullTicket">
-                      <label class="form-check-label" for="clubFullTicket">
-                        <strong>Full Ticket</strong>
-                        <br><small class="text-muted">Entrada completa sin pago adicional</small>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="clubPreSale">
-                      <label class="form-check-label" for="clubPreSale">
-                        <strong>Pre-Sale</strong>
-                        <br><small class="text-muted">Venta anticipada con descuento</small>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label for="clubDescripcion" class="form-label">Descripción (opcional)</label>
-                <textarea class="form-control" id="clubDescripcion" rows="3" placeholder="Breve descripción del club..."></textarea>
-              </div>
-
-              <div class="mb-3">
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="clubActivo" checked>
-                  <label class="form-check-label" for="clubActivo">
-                    <strong>Club Activo</strong>
-                    <br><small class="text-muted">Desmarcar para desactivar temporalmente</small>
-                  </label>
-                </div>
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="button" class="btn btn-success" onclick="saveNewClub()">
-              <i data-lucide="save" class="me-1"></i>
-              Guardar Club
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+     
 
     <!-- Modal para agregar nuevo producto -->
     <div class="modal fade" id="addProductoModal" tabindex="-1" aria-labelledby="addProductoModalLabel" aria-hidden="true">
@@ -507,6 +375,79 @@
             <button type="button" class="btn btn-success" id="saveProductoBtn">
               <i data-lucide="save" class="me-1"></i>
               Guardar Producto
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL PARA AÑADIR CLUB/PRODUCTO A UN DÍA (CATÁLOGO) -->
+    <div class="modal fade" id="addCatalogModal" tabindex="-1" aria-labelledby="addCatalogModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addCatalogModalLabel">
+              <i data-lucide="plus-circle" class="me-2"></i>
+              Añadir Club/Producto al Día
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="addCatalogForm">
+              <div class="mb-3">
+                <label for="catalogProducto" class="form-label">Club/Producto *</label>
+                <select class="form-select" id="catalogProducto" required>
+                  <option value="">Selecciona un club/producto</option>
+                </select>
+                <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addCatalogProductoBtn">
+                  <i data-lucide="plus"></i> Añadir Nuevo Producto
+                </button>
+              </div>
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="catalogDrink" checked>
+                  <label class="form-check-label" for="catalogDrink">
+                    <strong>Drink incluido</strong>
+                  </label>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label for="catalogPrecio" class="form-label">Precio</label>
+                <input type="number" class="form-control" id="catalogPrecio" min="0" step="0.01" placeholder="Ej: 20">
+              </div>
+              <div class="mb-3">
+                <label for="catalogHora" class="form-label">Horario</label>
+                <input type="text" class="form-control" id="catalogHora" placeholder="Ej: 23:00">
+              </div>
+              <div class="mb-3">
+                <label for="catalogOtro" class="form-label">Otro (opcional)</label>
+                <input type="text" class="form-control" id="catalogOtro" placeholder="Observaciones">
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="catalogFullTicket" checked>
+                    <label class="form-check-label" for="catalogFullTicket">
+                      Full Ticket
+                    </label>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="catalogPreSale" checked>
+                    <label class="form-check-label" for="catalogPreSale">
+                      Pre-Sale
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-success" id="saveCatalogBtn">
+              <i data-lucide="save" class="me-1"></i>
+              Guardar
             </button>
           </div>
         </div>
@@ -581,7 +522,7 @@ async function initializeFirebase() {
 async function loadAdminData() {
   try {
     showLoader(true);
-    await Promise.all([loadUsuarios(), loadClubs(), loadWeekSchedule()]);
+    await Promise.all([loadUsuarios(), loadWeekSchedule()]);
     lucide?.createIcons?.();
   } catch (err) {
     console.error("Error cargando datos admin:", err);
@@ -702,215 +643,154 @@ async function deleteUser(id) {
   }
 }
 
-async function loadClubs() {
+const WEEK_DAYS_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+// Utilidad para generar ID limpio para inputs
+const fieldId = (diaId, club, field) => `${diaId}_${club}_${field}`.replace(/\s+/g, '_');
+
+// Guardar campo individualmente
+window.saveClubField = async function(diaId, club, field, value) {
   try {
-    const snapshot = await db.collection('clubs').orderBy('nombre').get();
-    const clubs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    displayClubs(clubs);
+    const ref = db.collection('WeekDays').doc(diaId);
+    const updateData = {};
+    updateData[`clubs.${club}.${field}`] = field === 'precio' ? parseFloat(value) : value;
+    await ref.update(updateData);
+    console.log(`✅ Campo '${field}' actualizado para ${club} (${diaId})`);
   } catch (err) {
-    console.error("Error cargando clubs:", err);
-    document.getElementById('clubsTable').innerHTML = errorRow('clubs');
+    alert('Error al actualizar campo');
+    console.error(err);
   }
-}
+};
 
-function displayClubs(lista) {
-  const table = document.getElementById('clubsTable');
-  if (lista.length === 0) {
-    table.innerHTML = emptyRow('clubs');
-    return;
+// Botón opcional para notificar cambios
+window.notificarCambioPrecio = async function(diaId, club) {
+  try {
+    const doc = await db.collection('WeekDays').doc(diaId).get();
+    if (!doc.exists) return alert("No se encontró el día");
+
+    const clubData = doc.data().clubs?.[club];
+    if (!clubData) return alert("No se encontró el club");
+
+    const msg = `📢 ${club} (${diaId})\n🕒 ${clubData.hora || '-'}\n💸 ${clubData.precio || '-'}`;
+    if (!confirm(`¿Enviar notificación?\n\n${msg}`)) return;
+
+    await db.collection('notificaciones').add({
+      titulo: `Cambio en ${club}`,
+      cuerpo: msg,
+      tipo: 'precio',
+      enviadoPor: localStorage.getItem('nombre') || 'admin',
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    alert('✅ Notificación enviada');
+  } catch (err) {
+    alert('Error al enviar notificación');
+    console.error(err);
   }
+};
 
-  table.innerHTML = lista.map(c => {
-    const activo = c.activo !== false;
-    // Mostrar disponibilidad como insignias visuales
-    let dispHtml = '';
-    if (c.disponibilidad && typeof c.disponibilidad === 'object') {
-      const dias = Object.keys(c.disponibilidad).filter(d => c.disponibilidad[d]);
-      if (dias.length === 7) {
-        dispHtml = '<span class="badge bg-success">Toda la semana</span>';
-      } else if (dias.length > 0) {
-        dispHtml = dias.map(d => {
-          const abrev = d.slice(0,3).charAt(0).toUpperCase() + d.slice(1,3);
-          return `<span class="badge bg-primary me-1">${abrev}</span>`;
-        }).join('');
-      } else {
-        dispHtml = '<span class="badge bg-secondary">Sin días</span>';
-      }
-    } else if (c.disponibilidad === 'siempre') {
-      dispHtml = '<span class="badge bg-success">Siempre</span>';
+// Función principal de renderizado en tiempo real
+function renderWeekSchedule(docs) {
+  const table = document.getElementById('weekScheduleTable');
+  let html = '';
+  WEEK_DAYS_ORDER.forEach(dia => {
+    const data = docs[dia] || {};
+    html += `<tr><td colspan="100%" class="day-block fw-bold py-2" style="font-size:1.15rem;">
+      <span class="day-title">${dia.charAt(0).toUpperCase() + dia.slice(1)}</span>
+      <button class="btn btn-sm btn-outline-light ms-2" onclick="showAddClubModal('${data.id || dia}')">
+        <i data-lucide="plus"></i> Añadir Club
+      </button>
+    </td></tr>`;
+    const clubs = Object.entries(data.clubs || {});
+    if (clubs.length > 0) {
+      html += '<tr><td colspan="100%"><div class="clubs-row">';
+      clubs.forEach(([club, val]) => {
+        html += `<div class="club-card">
+            <strong>${club}</strong>
+            <div class="mt-2">
+              <div class="mb-2">
+                <label class="form-label mb-0">💲 Precio</label>
+                <input type="number" class="form-control form-control-sm" id="${fieldId(data.id, club, 'precio')}"
+                  value="${val.precio || ''}" onchange="saveClubField('${data.id}', '${club}', 'precio', this.value)">
+              </div>
+              <div class="mb-2">
+                <label class="form-label mb-0">🕒 Hora</label>
+                <input type="text" class="form-control form-control-sm" id="${fieldId(data.id, club, 'hora')}"
+                  value="${val.hora || ''}" onchange="saveClubField('${data.id}', '${club}', 'hora', this.value)">
+              </div>
+              <div class="mb-2">
+                <label class="form-label mb-0">🔤 Otro</label>
+                <input type="text" class="form-control form-control-sm" id="${fieldId(data.id, club, 'otro')}"
+                  value="${val.otro || ''}" onchange="saveClubField('${data.id}', '${club}', 'otro', this.value)">
+              </div>
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="${fieldId(data.id, club, 'drink')}" ${val.drink ? 'checked' : ''}
+                  onchange="saveClubField('${data.id}', '${club}', 'drink', this.checked)">
+                <label class="form-check-label">Drink incluido</label>
+              </div>
+              <button class="btn btn-outline-warning btn-sm me-2" onclick="notificarCambioPrecio('${data.id}','${club}')">
+                <i data-lucide="megaphone"></i> Notificar cambio
+              </button>
+              <button class="btn btn-outline-danger btn-sm" onclick="removeClubFromDay('${data.id}','${club}')">
+                <i data-lucide="trash-2"></i> Eliminar
+              </button>
+            </div>
+          </div>`;
+      });
+      html += '</div></td></tr>';
     } else {
-      dispHtml = '<span class="badge bg-secondary">N/A</span>';
+      html += `<tr><td colspan="100%"><span class="text-muted">Sin clubs asignados</span></td></tr>`;
     }
-    return `
-      <tr>
-        <td><strong>${c.nombre || 'N/A'}</strong></td>
-        <td>${dispHtml}</td>
-        <td>${c.fullTicket ? badge("Sí", "success") : badge("No", "secondary")}</td>
-        <td>${c.preSale ? badge("Sí", "info") : badge("No", "secondary")}</td>
-        <td>${badge(activo ? "Activo" : "Inactivo", activo ? "success" : "danger")}</td>
-        <td>
-          <div class="d-flex gap-1">
-            <button class="btn btn-sm btn-outline-primary" onclick="editClub('${c.id}')"><i data-lucide="edit"></i></button>
-            <button class="btn btn-sm ${activo ? 'btn-outline-warning' : 'btn-outline-success'}" onclick="toggleClubStatus('${c.id}', ${!activo})">
-              <i data-lucide="${activo ? 'eye-off' : 'eye'}"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteClub('${c.id}')"><i data-lucide="trash-2"></i></button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join('');
+  });
+  table.innerHTML = html;
   lucide?.createIcons?.();
 }
 
-
-
-// --- FUNCIONES PARA ACCIONES DE CLUBS ---
-function editClub(id) {
-  alert('Función editar club próximamente. ID: ' + id);
-}
-function deleteClub(id) {
-  if (confirm('¿Seguro que quieres eliminar este club?')) {
-    db.collection('clubs').doc(id).delete().then(() => {
-      loadClubs();
-      alert('Club eliminado correctamente');
-    }).catch(err => {
-      alert('Error eliminando club');
-      console.error(err);
-    });
-  }
-}
-
-function badge(text, color) {
-  return `<span class="badge bg-${color}">${text}</span>`;
-}
-
-async function toggleClubStatus(id, active) {
-  try {
-    await db.collection('clubs').doc(id).update({ activo: active });
-    await loadClubs();
-    alert(`Club ${active ? 'activado' : 'desactivado'} correctamente`);
-  } catch (err) {
-    console.error("Error activando/desactivando club:", err);
-    alert("No se pudo cambiar el estado del club");
-  }
-}
-
-function showLoader(show) {
-  const el = document.getElementById('loadingOverlay');
-  if (el) el.style.display = show ? 'block' : 'none';
-}
-
-function emptyRow(entidad) {
-  return `<tr><td colspan="6" class="text-center text-muted">No hay ${entidad}</td></tr>`;
-}
-
-function errorRow(entidad) {
-  return `<tr><td colspan="6" class="text-center text-danger">Error cargando ${entidad}</td></tr>`;
-}
-
-const WEEK_DAYS_ORDER = [
-  'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'
-];
-
-// Cargar Week Schedule
-async function loadWeekSchedule() {
-  try {
-    const snapshot = await db.collection('WeekDays').get();
+// Activar sincronización en tiempo real con onSnapshot
+function loadWeekSchedule() {
+  db.collection('WeekDays').onSnapshot(snap => {
     const docs = {};
-    snapshot.forEach(doc => {
+    snap.forEach(doc => {
       docs[doc.id.toLowerCase()] = { id: doc.id, ...doc.data() };
     });
-
-    // Cargar plantilla
-    const plantillaDoc = await db.collection('WeekDays').doc('ZztLcBI1ZVBhPvewSUMi').get();
-    const plantilla = plantillaDoc.exists ? plantillaDoc.data() : {};
-
-    // Renderizar tabla
-    const table = document.getElementById('weekScheduleTable');
-    table.innerHTML = WEEK_DAYS_ORDER.map(dia => {
-      const data = docs[dia] || {};
-      const clubs = data.clubs || {};
-      const clubRows = Object.entries(clubs)
-        .filter(([club, val]) => val !== null)
-        .map(([club, val]) => `
-          <div class="mb-2 border rounded p-2">
-            <strong>${club}</strong>
-            <span class="badge bg-${val.drink ? 'success' : 'secondary'} ms-2">${val.drink ? 'Con Drink' : 'Sin Drink'}</span>
-            <span class="ms-2">💲${val.precio || ''}</span>
-            <span class="ms-2">🕒 ${val.hora || ''}</span>
-            <span class="ms-2">${val.otro || ''}</span>
-            <button class="btn btn-sm btn-outline-danger ms-2" onclick="removeClubFromDay('${data.id}','${club}')"><i data-lucide="trash-2"></i></button>
-          </div>
-        `).join('') || '<span class="text-muted">Sin clubs asignados</span>';
-
-      return `
-        <tr>
-          <td class="fw-bold text-capitalize">${dia}</td>
-          <td>${clubRows}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-primary" onclick="showAddClubModal('${data.id || dia}')">
-              <i data-lucide="plus"></i> Añadir Club
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
-    lucide?.createIcons?.();
-  } catch (err) {
-    document.getElementById('weekScheduleTable').innerHTML = `<tr><td colspan="3" class="text-center text-danger">Error cargando horarios</td></tr>`;
-    console.error("Error cargando Week Schedule:", err);
-  }
+    renderWeekSchedule(docs);
+  });
 }
+
 
 // Modal para añadir club a un día
 function showAddClubModal(diaId) {
-  // Puedes usar un modal Bootstrap existente o crear uno aquí
-  // Aquí un ejemplo simple con prompt:
-  const club = prompt('Nombre del club:');
-  if (!club) return;
-  const drink = confirm('¿Con drink incluido?');
-  const precio = prompt('Precio:');
-  const hora = prompt('Hora:');
-  const otro = prompt('Otro (opcional):');
-
-  // Guardar en Firestore
-  addClubToDay(diaId, club, { drink, precio, hora, otro });
+  window._catalogDiaId = diaId;
+  cargarCatalogoProductos();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('addCatalogModal')).show();
 }
 
-async function addClubToDay(diaId, club, data) {
+async function cargarCatalogoProductos() {
+  const select = document.getElementById('catalogProducto');
+  select.innerHTML = '<option value="">Selecciona un club/producto</option>';
   try {
-    const ref = db.collection('WeekDays').doc(diaId);
-    await ref.set({ clubs: { [club]: data } }, { merge: true });
-    await loadWeekSchedule();
+    const snapshot = await db.collection('Productos').get();
+    snapshot.forEach(doc => {
+      const nombre = doc.data().nombre || doc.id;
+      select.innerHTML += `<option value="${nombre}">${nombre}</option>`;
+    });
   } catch (err) {
-    alert('Error añadiendo club');
-    console.error(err);
+    select.innerHTML += '<option value="">Error cargando productos</option>';
   }
 }
 
-async function removeClubFromDay(diaId, club) {
-  try {
-    const ref = db.collection('WeekDays').doc(diaId);
-    await ref.update({ [`clubs.${club}`]: firebase.firestore.FieldValue.delete() });
-    await loadWeekSchedule();
-  } catch (err) {
-    alert('Error eliminando club');
-    console.error(err);
-  }
-}
-
-
-
-// Inicialización DOM
 document.addEventListener('DOMContentLoaded', () => {
   initializeFirebase();
 
+  // Iconos Lucide para toda la página
+  setTimeout(() => {
+    lucide?.createIcons?.();
+  }, 300);
+
+  // Botones de token
   const btnToken = document.getElementById('getTokenBtn');
   const btnCopiar = document.getElementById('copyTokenBtn');
-
   if (btnToken) btnToken.addEventListener('click', getAdminToken);
-
   if (btnCopiar) {
     btnCopiar.addEventListener('click', () => {
       const token = (document.getElementById('adminTokenDisplay').textContent || '').trim();
@@ -924,40 +804,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Cargar productos al iniciar
-  loadProductos();
-});
-
-// Productos Firestore CRUD
-async function loadProductos() {
-  try {
-    const snapshot = await db.collection('Productos').get();
-    const productos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    displayProductos(productos);
-  } catch (err) {
-    console.error('Error cargando productos:', err);
-    document.getElementById('productosTable').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error cargando productos</td></tr>';
+  // Botón añadir producto desde modal catálogo
+  const addCatalogProductoBtn = document.getElementById('addCatalogProductoBtn');
+  if (addCatalogProductoBtn) {
+    addCatalogProductoBtn.onclick = function() {
+      // Cierra el modal catálogo y abre el modal de producto
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('addCatalogModal')).hide();
+      document.getElementById('addProductoForm').reset();
+      document.getElementById('subProductosList').innerHTML = '';
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('addProductoModal')).show();
+    };
   }
-}
 
-function displayProductos(lista) {
-  const table = document.getElementById('productosTable');
-  if (lista.length === 0) {
-    table.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No hay productos</td></tr>';
-    return;
-  }
-  table.innerHTML = lista.map(p => {
-    const subProds = p.subProductos ? Object.keys(p.subProductos).map(k => `<span class='badge bg-info me-1'>${k}</span>`).join('') : '<span class="text-muted">N/A</span>';
-    return `<tr>
-      <td><strong>${p.nombre || 'N/A'}</strong></td>
-      <td>${subProds}</td>
-      <td><!-- Acciones futuras --></td>
-    </tr>`;
-  }).join('');
-  lucide?.createIcons?.();
-}
-
-// Modal Sub-Productos
+  // Botón guardar producto desde modal
+  // Modal Sub-Productos
 let subProductos = {};
 function renderSubProductos() {
   const list = document.getElementById('subProductosList');
@@ -999,54 +859,166 @@ document.getElementById('saveProductoBtn').addEventListener('click', async funct
   }
 });
 
-
-// --- GUARDAR NUEVO CLUB DESDE EL MODAL ---
-async function saveNewClub() {
-  const nombre = document.getElementById('clubNombre').value.trim();
-  const disponibilidadSel = document.getElementById('clubDisponibilidad').value;
-  const fullTicket = document.getElementById('clubFullTicket').checked;
-  const preSale = document.getElementById('clubPreSale').checked;
-  const descripcion = document.getElementById('clubDescripcion').value.trim();
-  const activo = document.getElementById('clubActivo').checked;
-
-  if (!nombre) return alert('El nombre del club es obligatorio');
-  if (!disponibilidadSel) return alert('Selecciona la disponibilidad');
-
-  // Construir disponibilidad como objeto de días
-  let disponibilidad = {};
-  if (disponibilidadSel === 'siempre') {
-    disponibilidad = { lunes:true, martes:true, miércoles:true, jueves:true, viernes:true, sábado:true, domingo:true };
-  } else if (disponibilidadSel === 'fin_semana') {
-    disponibilidad = { viernes:true, sábado:true };
-  } else if (disponibilidadSel === 'entre_semana') {
-    disponibilidad = { lunes:true, martes:true, miércoles:true, jueves:true };
-  } else {
-    // Solo un día
-    disponibilidad[disponibilidadSel] = true;
+  // Botón cancelar producto desde modal
+  const cancelProductoBtn = document.querySelector('#addProductoModal .btn-secondary');
+  if (cancelProductoBtn) {
+    cancelProductoBtn.onclick = function() {
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('addProductoModal')).hide();
+    };
   }
 
-  const clubData = {
-    nombre,
-    disponibilidad,
-    fullTicket,
-    preSale,
-    descripcion,
-    activo,
-    fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
-  };
+  // Botón guardar catálogo
+  const saveCatalogBtn = document.getElementById('saveCatalogBtn');
+  if (saveCatalogBtn) {
+    saveCatalogBtn.onclick = async function() {
+      const diaId = window._catalogDiaId;
+      const club = document.getElementById('catalogProducto').value;
+      const drink = document.getElementById('catalogDrink').checked;
+      const precio = document.getElementById('catalogPrecio').value;
+      const hora = document.getElementById('catalogHora').value;
+      const otro = document.getElementById('catalogOtro').value;
+      const fullTicket = document.getElementById('catalogFullTicket').checked;
+      const preSale = document.getElementById('catalogPreSale').checked;
+      if (!club) return alert('Selecciona un club/producto');
+      const data = { drink, precio, hora, otro, fullTicket, preSale };
+      await addClubToDay(diaId, club, data);
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('addCatalogModal')).hide();
+    };
+  }
 
+  // Cargar productos al iniciar para el panel de productos
+  loadProductos();
+});
+
+// --- Loader para el admin ---
+function showLoader(show) {
+  // Puedes implementar un overlay o spinner global si lo deseas
+  // Por defecto, no hace nada
+}
+
+// --- Productos Firestore CRUD ---
+async function loadProductos() {
   try {
-    await db.collection('clubs').add(clubData);
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('addClubModal')).hide();
-    document.getElementById('addClubForm').reset();
-    await loadClubs();
-    alert('Club guardado correctamente');
+    const snapshot = await db.collection('Productos').get();
+    const productos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    displayProductos(productos);
   } catch (err) {
-    alert('Error guardando club');
+    console.error('Error cargando productos:', err);
+    document.getElementById('productosTable').innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error cargando productos</td></tr>';
+  }
+}
+
+function displayProductos(lista) {
+  const table = document.getElementById('productosTable');
+  if (lista.length === 0) {
+    table.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No hay productos</td></tr>';
+    return;
+  }
+  table.innerHTML = lista.map(p => {
+    const subProds = p.subProductos ? Object.keys(p.subProductos).map(k => `<span class='badge bg-info me-1'>${k}</span>`).join('') : '<span class="text-muted">N/A</span>';
+    return `<tr>
+      <td><strong>${p.nombre || 'N/A'}</strong></td>
+      <td>${subProds}</td>
+      <td><!-- Acciones futuras --></td>
+    </tr>`;
+  }).join('');
+  lucide?.createIcons?.();
+}
+
+// --- Añadir club/producto a un día en WeekDays ---
+async function addClubToDay(diaId, club, data) {
+  try {
+    const ref = db.collection('WeekDays').doc(diaId);
+    const doc = await ref.get();
+    let clubs = {};
+    if (doc.exists && doc.data().clubs) {
+      clubs = doc.data().clubs;
+    }
+    clubs[club] = data;
+    await ref.set({ clubs }, { merge: true });
+    await loadWeekSchedule();
+    alert('Club/producto añadido exitosamente');
+  } catch (err) {
+    console.error('Error añadiendo club/producto:', err);
+    alert('No se pudo añadir el club/producto');
+  }
+}
+
+// --- Eliminar club/producto de un día en WeekDays ---
+async function removeClubFromDay(diaId, club) {
+  try {
+    const ref = db.collection('WeekDays').doc(diaId);
+    await ref.update({ [`clubs.${club}`]: firebase.firestore.FieldValue.delete() });
+    await loadWeekSchedule();
+  } catch (err) {
+    alert('Error eliminando club');
     console.error(err);
   }
 }
+
 </script>
+<style>
+  .clubs-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    justify-content: flex-start;
+  }
+  .club-card {
+    flex: 1 1 calc(25% - 0.7rem);
+    max-width: 23%;
+    min-width: 160px;
+    box-sizing: border-box;
+    padding: 0.7rem 0.7rem 0.5rem 0.7rem;
+    margin-bottom: 0.3rem;
+  }
+  @media (max-width: 1200px) {
+    .club-card { max-width: 31%; min-width: 140px; }
+  }
+  @media (max-width: 900px) {
+    .club-card { max-width: 47%; min-width: 120px; }
+  }
+  @media (max-width: 600px) {
+    .club-card { max-width: 98%; min-width: 90px; font-size: 0.97rem; padding: 0.5rem 0.5rem 0.3rem 0.5rem; }
+    .clubs-row { gap: 0.4rem; }
+  }
+</style>
+<style>
+  .day-block {
+    background: linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%);
+    color: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px 0 rgba(106,130,251,0.08), 0 1px 2px 0 rgba(252,92,125,0.04);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: none;
+  }
+  .day-title {
+    font-size: 1.18rem;
+    font-weight: 600;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    letter-spacing: 0.04em;
+  }
+  .club-card {
+    background: linear-gradient(135deg, #f8fafc 60%, #e0e7ff 100%);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px 0 rgba(106,130,251,0.07), 0 1px 2px 0 rgba(252,92,125,0.03);
+    min-width:220px;
+    max-width:260px;
+    padding: 1rem 1rem 0.7rem 1rem;
+    margin-bottom: 0.5rem;
+    transition: box-shadow 0.2s, transform 0.2s;
+    border: 1px solid #e0e7ff;
+  }
+  .club-card:hover {
+    box-shadow: 0 8px 24px 0 rgba(106,130,251,0.13), 0 2px 8px 0 rgba(252,92,125,0.07);
+    transform: translateY(-2px) scale(1.03);
+    border-color: #6a82fb;
+  }
+</style>
 
 </body>
 </html>

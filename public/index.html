@@ -106,8 +106,93 @@
     #sideMenuWrapper.active #overlay{opacity:.4;pointer-events:auto}
     #sideMenu{display:flex;flex-direction:column;height:100%}
     .mt-auto{margin-top:auto!important}
+
+
+
+ #pendingOverlay {
+    position: fixed;
+    z-index: 9999;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.9);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1.5em;
+    font-size: 1.3em;
+    opacity: 1;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  #pendingOverlay.fade-out {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(1.02);
+  }
+
+  .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    transition: transform 0.6s ease, opacity 0.6s ease;
+  }
+
+  #pendingOverlay.fade-out .spinner-border {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.08);
+    }
+  }
+
+  #pendingOverlay.fade-out img {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+
+
+    body.ios .form-control, body.ios input, body.ios select, body.ios button {
+  font-size: 1.08em;
+  border-radius: 18px !important;
+  box-shadow: 0 2px 8px 0 rgba(80,80,160,0.07);
+}
+body.android .form-control, body.android input, body.android select, body.android button {
+  font-size: 1em;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 4px 0 rgba(60,60,60,0.06);
+}
+body.ios #reservaForm, body.ios #resumenReserva {
+  background: #f8fafc;
+}
+body.android #reservaForm, body.android #resumenReserva {
+  background: #f4f6fb;
+}
+body.ios legend, body.ios label { color: #3b3b7a; }
+body.android legend, body.android label { color: #2d3748; }
+
+
   </style>
   
+  <script>
+  // Detecta el sistema operativo y asigna la clase al body
+  document.addEventListener('DOMContentLoaded', function() {
+    var ua = navigator.userAgent.toLowerCase();
+    var body = document.body;
+    if (/iphone|ipad|ipod|ios/.test(ua)) {
+      body.classList.add('ios');
+    } else if (/android/.test(ua)) {
+      body.classList.add('android');
+    } else {
+      body.classList.add('android'); // Por defecto Android si no se detecta iOS
+    }
+  });
+</script>
   <!-- Fuentes se cargan cuando se necesiten -->
   <script>
     function loadOrbitronFont() {
@@ -124,22 +209,27 @@
 
 <body class="bg-gray-50 text-gray-800">
   <!-- Overlay de carga para usuarios pendientes -->
-  <div id="pendingOverlay" style="display:none;position:fixed;z-index:9999;inset:0;background:rgba(0,0,0,0.85);color:white;align-items:center;justify-content:center;flex-direction:column;gap:1.5em;font-size:1.3em;">
-    <div class="spinner-border text-light mb-3" style="width:3rem;height:3rem;"></div>
+  <div id="pendingOverlay" style="opacity:1;transition:opacity .4s;position:fixed;z-index:9999;inset:0;background:rgba(255,255,255,0.85);color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5em;font-size:1.3em;">
+    <img src="icon-192.png" alt="NightDreams logo in a circular style, gently pulsing to indicate loading, displayed above a clean white background, no visible text, conveys a calm and welcoming atmosphere" class="mb-3" style="width:92px; height:92px; animation: pulse 1.4s infinite; transition: transform 0.6s ease, opacity 0.6s ease;">
   </div>
   <script>
-    // Mostrar overlay al cargar
+    // Overlay aparece sin retraso, se desvanece al aprobar usuario con animación hacia el centro
     window.addEventListener('DOMContentLoaded', function() {
       const overlay = document.getElementById('pendingOverlay');
-      if (overlay) overlay.style.display = 'flex';
-      // Cuando el usuario está aprobado, ocultar overlay
+      const spinner = overlay ? overlay.querySelector('.spinner-border') : null;
       if (window.firebase && window.firebase.auth && window.firebase.firestore) {
         window.firebase.auth().onAuthStateChanged(async user => {
           if (!user) return;
           const snap = await window.firebase.firestore().collection('usuarios').doc(user.uid).get();
           if (snap.exists && snap.data().estado === 'Aprobado') {
-            if (overlay) overlay.style.display = 'none';
-          }
+  if (overlay) {
+    overlay.classList.add('fade-out');
+    overlay.addEventListener('transitionend', () => {
+  overlay.remove();
+});
+  }
+}
+
         });
       }
     });
@@ -151,7 +241,6 @@
       <img src="icon-192.png" class="w-12 h-12" alt="NightDreams logo">
     </div>
     <div class="flex items-center space-x-4">
-      <button id="guardarTokenBtn"><i data-lucide="send"></i></button>
       <button id="notificacionesBtn"><i data-lucide="bell"></i></button>
       <button id="refreshBtn"><i data-lucide="refresh-ccw"></i></button>
     </div>
@@ -164,7 +253,7 @@
     <div id="sideMenu" class="absolute left-0 top-0 w-64 h-full bg-white shadow-lg transform -translate-x-full transition-transform duration-300 z-10">
       <div class="p-4 flex items-center space-x-2">
         <img src="icon-192.png" class="w-8 h-8">
-        <h1 class="text-base logo-font">NIGHT DREAMS</h1>
+        <h1 class="text-base logo-font">NIGHTDREAMS</h1>
       </div>
 
       <div class="p-4">
@@ -193,22 +282,23 @@
   <main id="content" class="p-4 pt-24 pb-28 mb-3"></main>
 
   <!-- NAV INFERIOR -->
-  <nav class="fixed bottom-0 w-full bg-white shadow-inner border-t flex px-2 pb-8 pt-2">
-    <button data-page="home"       class="nav-btn flex-1 flex flex-col items-center py-2 text-xs text-gray-600 border-r">
-      <i data-lucide="star"></i><span>Inicio</span>
-    </button>
-    <button data-page="reservas"   class="nav-btn flex-1 flex flex-col items-center py-2 text-xs text-gray-600 border-r">
-      <i data-lucide="list"></i><span>Reservas</span>
-    </button>
-    <button data-page="formulario" class="nav-btn flex-1 flex flex-col items-center py-2 text-xs text-gray-600 border-r">
-      <i data-lucide="ticket"></i><span>Formulario</span>
-    </button>
-    <button data-page="devolver"   class="nav-btn flex-1 flex flex-col items-center py-2 text-xs text-gray-600 border-r">
-      <i data-lucide="wallet"></i><span>Devolver</span>
-    </button>
-    <button data-page="mesas"      class="nav-btn flex-1 flex flex-col items-center py-2 text-xs text-gray-600">
-      <i data-lucide="martini"></i><span>Mesas</span>
-    </button>
-  </nav>
+  <nav class="fixed bottom-0 w-full bg-white shadow-t border-t flex justify-between px-1 pt-2 pb-safe z-40 text-xs">
+  <button data-page="home" class="nav-btn flex-1 flex flex-col items-center gap-1 py-2 text-gray-600">
+    <i data-lucide="star" class="w-5 h-5"></i><span class="text-[clamp(0.65rem,2vw,0.75rem)] leading-tight">Inicio</span>
+  </button>
+  <button data-page="reservas" class="nav-btn flex-1 flex flex-col items-center gap-1 py-2 text-gray-600">
+    <i data-lucide="list" class="w-5 h-5"></i><span class="text-[clamp(0.65rem,2vw,0.75rem)] leading-tight">Reservas</span>
+  </button>
+  <button data-page="formulario" class="nav-btn flex-1 flex flex-col items-center gap-1 py-2 text-gray-600">
+    <i data-lucide="ticket" class="w-5 h-5"></i><span class="text-[clamp(0.65rem,2vw,0.75rem)] leading-tight">Formulario</span>
+  </button>
+  <button data-page="devolver" class="nav-btn flex-1 flex flex-col items-center gap-1 py-2 text-gray-600">
+    <i data-lucide="wallet" class="w-5 h-5"></i><span class="text-[clamp(0.65rem,2vw,0.75rem)] leading-tight">Devolver</span>
+  </button>
+  <button data-page="mesas" class="nav-btn flex-1 flex flex-col items-center gap-1 py-2 text-gray-600">
+    <i data-lucide="martini" class="w-5 h-5"></i><span class="text-[clamp(0.65rem,2vw,0.75rem)] leading-tight">Mesas</span>
+  </button>
+</nav>
+
 </body>
 </html>

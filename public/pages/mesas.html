@@ -1,31 +1,169 @@
-<h2 class="text-xl font-bold mb-4">Gestión de Mesas</h2>
 
-<div class="flex flex-wrap gap-2 mb-4">
-  <input type="text" id="clienteMesa" placeholder="Cliente" class="border rounded px-2 py-1 w-24"/>
-  <input type="number" id="paxMesa" placeholder="PAX" class="border rounded px-2 py-1 w-16"/>
-  <input type="number" id="precioMesa" placeholder="Precio" class="border rounded px-2 py-1 w-20"/>
-  <input type="text" id="promotorMesa" placeholder="Promotor" class="border rounded px-2 py-1 w-24"/>
-  <input type="text" id="numMesa" placeholder="Mesa" class="border rounded px-2 py-1 w-16"/>
-  <button id="addMesaBtn" class="bg-gray-800 text-white px-4 py-1 rounded shadow">OK</button>
-  <button id="clearMesasBtn" class="bg-red-600 text-white px-4 py-1 rounded shadow">Limpiar</button>
-</div>
 
-<div class="mb-6">
-  <h3 class="font-semibold mb-2">En Cola</h3>
-  <ul id="listaEnCola" class="space-y-2"></ul>
-</div>
+<style>
+  body {
+    font-family: 'Inter', Arial, sans-serif;
+    background: linear-gradient(120deg, #f8fafc 0%, #e0e7ff 100%);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+  .container-mesas {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 1.5em 1em 2em 1em;
+  }
+  h2 {
+    font-size: 1.6em;
+    font-weight: bold;
+    margin-bottom: 1em;
+    color: #312e81;
+    text-align: center;
+  }
+  .form-mesas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7em;
+    margin-bottom: 1.5em;
+    background: #fff;
+    border-radius: 1em;
+    box-shadow: 0 2px 8px rgba(60,60,180,0.07);
+    padding: 1em;
+    justify-content: center;
+  }
+  .form-mesas input {
+    border: 1px solid #c7d2fe;
+    border-radius: 0.7em;
+    padding: 0.7em 1em;
+    font-size: 1em;
+    width: 100px;
+    background: #f1f5f9;
+    transition: border 0.2s;
+  }
+  .form-mesas input:focus {
+    border-color: #6366f1;
+    outline: none;
+  }
+  .form-mesas button {
+    font-size: 1em;
+    padding: 0.7em 1.2em;
+    border-radius: 0.7em;
+    border: none;
+    box-shadow: 0 2px 8px rgba(60,60,180,0.07);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  #addMesaBtn {
+    background: linear-gradient(90deg,#6366f1 60%,#818cf8 100%);
+    color: #fff;
+    font-weight: bold;
+  }
+  #addMesaBtn:hover {
+    background: #4338ca;
+  }
+  #clearMesasBtn {
+    background: linear-gradient(90deg,#ef4444 60%,#f87171 100%);
+    color: #fff;
+    font-weight: bold;
+  }
+  #clearMesasBtn:hover {
+    background: #b91c1c;
+  }
+  .mesa-section {
+    margin-bottom: 2em;
+  }
+  .mesa-section h3 {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #312e81;
+    margin-bottom: 0.7em;
+    letter-spacing: 0.02em;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .mesa-card-inner {
+    transition: box-shadow 0.2s;
+  }
+  .mesa-card-inner:hover {
+    box-shadow: 0 4px 16px rgba(60, 60, 180, 0.12);
+  }
+  .mesa-btn-in, .mesa-btn-out {
+    font-size: 1rem;
+    padding: 0.7em 1.2em;
+    border: none;
+    cursor: pointer;
+    border-radius: 1em;
+    box-shadow: 0 2px 8px rgba(60,60,180,0.07);
+  }
+  .mesa-btn-in {
+    background: linear-gradient(90deg,#22c55e 60%,#4ade80 100%);
+    color: #fff;
+    font-weight: bold;
+  }
+  .mesa-btn-in:hover {
+    background: #16a34a;
+  }
+  .mesa-btn-out {
+    background: linear-gradient(90deg,#ef4444 60%,#f87171 100%);
+    color: #fff;
+    font-weight: bold;
+  }
+  .mesa-btn-out:hover {
+    background: #b91c1c;
+  }
+  @media (max-width: 600px) {
+    .container-mesas {
+      max-width: 100vw;
+      padding: 0.5em 0.2em 1em 0.2em;
+    }
+    .form-mesas {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5em;
+    }
+    .form-mesas input {
+      width: 100%;
+    }
+    .mesa-card-inner {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .mesa-btn-in, .mesa-btn-out {
+      width: 100%;
+      margin-bottom: 0.5em;
+    }
+  }
+</style>
 
-<div class="mb-6">
-  <h3 class="font-semibold mb-2">Confirmadas</h3>
-  <ul id="listaConfirmadas" class="space-y-2"></ul>
-</div>
-
-<div>
-  <h3 class="font-semibold mb-2">Rechazadas</h3>
-  <ul id="listaRechazadas" class="space-y-2"></ul>
-</div>
-
-<!-- Script de lógica de mesas -->
-<script src="../scripts/mesas.js"></script>
-</div>
+<body>
+  <div class="container-mesas">
+    <h2>Gestión de Mesas</h2>
+    <form class="form-mesas" onsubmit="return false;">
+      <input type="text" id="clienteMesa" placeholder="Cliente" autocomplete="off" />
+      <input type="number" id="paxMesa" placeholder="PAX" min="1" />
+      <input type="number" id="precioMesa" placeholder="Precio" min="0" step="0.01" />
+      <input type="text" id="promotorMesa" placeholder="Promotor" autocomplete="off" />
+      <input type="text" id="numMesa" placeholder="Mesa" autocomplete="off" />
+      <button id="addMesaBtn" type="button">OK</button>
+      <button id="clearMesasBtn" type="button">Limpiar</button>
+    </form>
+    <div class="mesa-section">
+      <h3>En Cola</h3>
+      <ul id="listaEnCola"></ul>
+    </div>
+    <div class="mesa-section">
+      <h3>Confirmadas</h3>
+      <ul id="listaConfirmadas"></ul>
+    </div>
+    <div class="mesa-section">
+      <h3>Rechazadas</h3>
+      <ul id="listaRechazadas"></ul>
+    </div>
+  </div>
+  <!-- Script de lógica de mesas -->
+  <script src="../scripts/mesas.js"></script>
+</body>
 

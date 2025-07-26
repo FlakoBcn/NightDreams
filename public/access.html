@@ -214,9 +214,16 @@
     setTimeout(() => location.replace(destino), 1200);
 
   } catch (err) {
-    submitBtn.disabled = false;
-    resultado.innerHTML =
-      `<div class="alert alert-danger">❌ ${err.message}</div>`;
+  submitBtn.disabled = false;
+
+  if (err.code === 'auth/wrong-password') {
+    resultado.innerHTML = '<div class="alert alert-danger">Contraseña incorrecta.</div>';
+  } else if (err.code === 'auth/user-not-found') {
+    resultado.innerHTML = '<div class="alert alert-danger">Correo no registrado.</div>';
+  } else {
+    resultado.innerHTML = `<div class="alert alert-danger">❌ ${err.message}</div>`;
+  }
+
     console.error('[AUTH ERROR]', err);
   }
 });

@@ -75,9 +75,6 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/ServiceWorker.js')
   .then(r => console.log('[SW] registrado', r.scope))
   .catch(console.warn);
-navigator.serviceWorker.register('/firebase-messaging-sw.js')
-    .then(r => console.log('[FCM SW] registrado', r.scope))
-    .catch(console.warn);
 }
 
 /* CONEXIÓN *****************************************************************/
@@ -181,7 +178,7 @@ function handleNoUser(currentPage) {
   }
 }
 
-function handleDeniedAccess(res, user, currentPage) {
+async function handleDeniedAccess(res, user, currentPage) {
   console.log('[AUTH] Acceso denegado:', res.motivo);
 
   if (res.motivo === 'pendiente_aprobacion') {
@@ -192,7 +189,10 @@ function handleDeniedAccess(res, user, currentPage) {
 
   // usuario eliminado u otros casos
   limpiarSesionLocal();
-  auth.signOut().finally(() => location.replace('access.html'));
+if (auth.currentUser) {
+  await auth.signOut();
+}
+location.replace('access.html');
 }
 
 function setLocalStorageUser(uid, userData, esAdmin) {
@@ -447,8 +447,10 @@ function setupPeriodicVerification() {
         if (!resultado.acceso && resultado.motivo === 'usuario_no_existe') {
           alert('Tu cuenta ha sido eliminada. Serás redirigido al login.');
           limpiarSesionLocal();
-          await auth.signOut();
-          window.location.href = 'access.html';
+          if (auth.currentUser) {
+            await auth.signOut();
+          }
+          location.replace('access.html');
         }
       }
     }, 30000); // 30 segundos

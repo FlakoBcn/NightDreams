@@ -1,5 +1,91 @@
-<h2 class="text-2xl font-bold mb-4">Mis Reservas</h2>
-<div id="tablaReservasPromotor">
-  <p class="text-gray-500">Cargando reservas…</p>
+<div class="max-w-3xl mx-auto mt-6">
+  <h2 class="text-2xl font-bold mb-4 text-center">Mis Reservas</h2>
+  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4 p-3 rounded-lg shadow bg-gradient-to-r from-blue-50 to-pink-50 border border-blue-100">
+    <div>
+      <label class="block text-sm font-semibold mb-1 text-blue-900">Ordenar por</label>
+      <select id="ordenReservas" class="form-select form-select-sm rounded shadow-sm border-blue-200">
+        <option value="fecha_desc">Fecha (más reciente)</option>
+        <option value="fecha_asc">Fecha (más antigua)</option>
+        <option value="nombre">Nombre</option>
+        <option value="club">Club</option>
+        <option value="estado">Estado</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-semibold mb-1 text-blue-900">Filtrar por estado</label>
+      <select id="filtroEstado" class="form-select form-select-sm rounded shadow-sm border-blue-200">
+        <option value="">Todos</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="confirmada">Confirmada</option>
+        <option value="cancelada">Cancelada</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-semibold mb-1 text-blue-900">Buscar</label>
+      <input id="busquedaReservas" type="text" class="form-control form-control-sm rounded shadow-sm border-blue-200" placeholder="Nombre, club, etc...">
+    </div>
+  </div>
+  <div id="tablaReservasPromotor" class="rounded-lg shadow bg-white border border-blue-100 overflow-x-auto">
+    <p class="text-gray-500 p-4">Cargando reservas…</p>
+  </div>
 </div>
+<script>
+// --- Demo dinámica para tabla de reservas ---
+const reservasDemo = [
+  { nombre: "Juan Pérez", club: "Dreams", fecha: "2025-07-25", estado: "confirmada" },
+  { nombre: "Ana López", club: "Night", fecha: "2025-07-24", estado: "pendiente" },
+  { nombre: "Carlos Ruiz", club: "Dreams", fecha: "2025-07-23", estado: "cancelada" },
+  { nombre: "Lucía Gómez", club: "Night", fecha: "2025-07-22", estado: "confirmada" },
+  { nombre: "Mario Díaz", club: "Dreams", fecha: "2025-07-21", estado: "pendiente" },
+];
+
+function renderReservasTabla(reservas) {
+  if (!reservas.length) {
+    document.getElementById('tablaReservasPromotor').innerHTML = '<p class="text-gray-400 p-4">No hay reservas para mostrar.</p>';
+    return;
+  }
+  let html = `<table class="table table-hover align-middle mb-0">
+    <thead class="bg-gradient-to-r from-blue-100 to-pink-100">
+      <tr>
+        <th>Nombre</th>
+        <th>Club</th>
+        <th>Fecha</th>
+        <th>Estado</th>
+      </tr>
+    </thead>
+    <tbody>`;
+  reservas.forEach(r => {
+    html += `<tr>
+      <td class="fw-semibold">${r.nombre}</td>
+      <td>${r.club}</td>
+      <td>${r.fecha}</td>
+      <td><span class="badge rounded-pill ${r.estado==='confirmada'?'bg-success':r.estado==='pendiente'?'bg-warning text-dark':'bg-danger'}">${r.estado.charAt(0).toUpperCase()+r.estado.slice(1)}</span></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('tablaReservasPromotor').innerHTML = html;
+}
+
+function filtrarYOrdenar() {
+  let arr = [...reservasDemo];
+  const orden = document.getElementById('ordenReservas').value;
+  const filtro = document.getElementById('filtroEstado').value;
+  const busqueda = document.getElementById('busquedaReservas').value.trim().toLowerCase();
+  if (filtro) arr = arr.filter(r => r.estado === filtro);
+  if (busqueda) arr = arr.filter(r => r.nombre.toLowerCase().includes(busqueda) || r.club.toLowerCase().includes(busqueda));
+  if (orden === 'fecha_desc') arr.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  else if (orden === 'fecha_asc') arr.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  else if (orden === 'nombre') arr.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  else if (orden === 'club') arr.sort((a,b)=>a.club.localeCompare(b.club));
+  else if (orden === 'estado') arr.sort((a,b)=>a.estado.localeCompare(b.estado));
+  renderReservasTabla(arr);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderReservasTabla(reservasDemo);
+  document.getElementById('ordenReservas').onchange = filtrarYOrdenar;
+  document.getElementById('filtroEstado').onchange = filtrarYOrdenar;
+  document.getElementById('busquedaReservas').oninput = filtrarYOrdenar;
+});
+</script>
 
