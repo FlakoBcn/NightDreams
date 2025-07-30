@@ -72,9 +72,18 @@ const VAPID_KEY = 'BJklec5TmcAlNhPnCeyTRbDV44eDLHH-pTWcSRFYZw0E6RZI4PG6vbijPmnZc
 
 /* SERVICE WORKER ***********************************************************/
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/ServiceWorker.js')
-  .then(r => console.log('[SW] registrado', r.scope))
-  .catch(console.warn);
+  navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+    .then(existingRegistration => {
+      if (existingRegistration) {
+        console.log('[SW] Service Worker already registered:', existingRegistration.scope);
+      } else {
+        console.log('[SW] Registering new Service Worker...');
+        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+          .then(r => console.log('[SW] Registered successfully:', r.scope))
+          .catch(err => console.warn('[SW] Registration failed:', err));
+      }
+    })
+    .catch(err => console.error('[SW] Error checking existing registration:', err));
 }
 
 /* CONEXIÓN *****************************************************************/
@@ -109,7 +118,7 @@ if (!isOnline) showOfflineBanner();
 
 /* DOM ELEMENTS *************************************************************/
 let content, navButtons, menuBtn, sideMenuWrapper, overlay, sideMenu;
-let clearCacheBtn, logoutBtn, notifBtn, saveTokenBtn, refreshBtn;
+let dailyDashboardBtn, logoutBtn, notifBtn, saveTokenBtn, refreshBtn;
 
 function initDOM() {
   content = document.getElementById('content');
@@ -118,7 +127,7 @@ function initDOM() {
   sideMenuWrapper = document.getElementById('sideMenuWrapper');
   overlay = document.getElementById('overlay');
   sideMenu = document.getElementById('sideMenu');
-  clearCacheBtn = document.getElementById('clearCacheBtn');
+  dailyDashboardBtn = document.getElementById('dailyDashboardBtn');
   logoutBtn = document.getElementById('logoutBtn');
   notifBtn = document.getElementById('notificacionesBtn');
   saveTokenBtn = document.getElementById('guardarTokenBtn');
@@ -262,6 +271,17 @@ function updateUserUI(nombre, correo, rol, isAdmin) {
   if (isAdmin && adminPanelEl) {
     adminPanelEl.classList.remove('hidden');
   }
+  // --- CONTROL VISIBILIDAD DEL BOTÓN LOGOUT SEGÚN ROL ---
+  // Para ocultar el logout a promotores, descomenta el siguiente bloque:
+  /*
+  if (logoutBtn) {
+    if (!isAdmin) {
+      logoutBtn.classList.add('hidden'); // O usa logoutBtn.style.display = 'none';
+    } else {
+      logoutBtn.classList.remove('hidden');
+    }
+  }
+  */
 }
 
 async function loadPage(page = 'home') {
@@ -341,16 +361,24 @@ function initEventListeners() {
     });
   }
 
-  // Cache clear
-  if (clearCacheBtn) clearCacheBtn.addEventListener('click', clearAppCache);
-  if (refreshBtn) refreshBtn.addEventListener('click', clearAppCache);
+  // Daily Dashboard
+  if (dailyDashboardBtn) {
+    dailyDashboardBtn.addEventListener('click', () => {
+      // Por ahora solo muestra un mensaje. Más adelante puedes implementar la lógica real.
+      alert('DailyDashboard aún no implementado. Próximamente aquí 😉');
+      // Ejemplo futuro: loadPage('dailydashboard');
+    });
+  }
+  // Refresh
+  if (refreshBtn) refreshBtn.addEventListener('click', () => location.reload());
 
   // Notifications
   if (notifBtn) {
     notifBtn.addEventListener('click', async () => {
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') return alert('Permiso de notificación denegado.');
-      await getFcmToken();
+       const token = await getFcmToken();
+    if (token) localStorage.setItem('fcmToken', token);
       alert('Notificaciones activadas ✔️');
     });
   }

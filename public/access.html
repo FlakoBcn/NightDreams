@@ -110,15 +110,6 @@
 
   
 <script>
-   // Mostrar el formulario o el banner PWA lo antes posible
-   auth.onAuthStateChanged(user => {
-     if (!isStandaloneMode()) {
-       showBanner();
-     } else {
-       showForm();
-     }
-   });
-
    document.addEventListener('DOMContentLoaded', () => {
       const form = document.getElementById('registroForm');
       const resultado = document.getElementById('resultado');
@@ -244,4 +235,3 @@
 </body>
 </html>
 
-    

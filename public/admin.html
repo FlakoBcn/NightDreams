@@ -79,9 +79,67 @@
       .form-check-label {
         font-size: 1rem;
       }
-    
-    </style>
-  
+
+
+
+
+  .clubs-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    justify-content: flex-start;
+  }
+  .club-card {
+    flex: 1 1 calc(25% - 1.2rem); /* 4 cards per row, minus gap */
+    max-width: 24%;
+    min-width: 220px;
+    box-sizing: border-box;
+  }
+  @media (max-width: 1200px) {
+    .club-card { max-width: 32%; }
+  }
+  @media (max-width: 900px) {
+    .club-card { max-width: 48%; }
+  }
+  @media (max-width: 600px) {
+    .club-card { max-width: 100%; }
+  }
+
+  .day-block {
+    background: linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%);
+    color: #fff;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px 0 rgba(106,130,251,0.08), 0 1px 2px 0 rgba(252,92,125,0.04);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: none;
+  }
+  .day-title {
+    font-size: 1.18rem;
+    font-weight: 600;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    letter-spacing: 0.04em;
+  }
+  .club-card {
+    background: linear-gradient(135deg, #f8fafc 60%, #e0e7ff 100%);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px 0 rgba(106,130,251,0.07), 0 1px 2px 0 rgba(252,92,125,0.03);
+    min-width:220px;
+    max-width:260px;
+    padding: 1rem 1rem 0.7rem 1rem;
+    margin-bottom: 0.5rem;
+    transition: box-shadow 0.2s, transform 0.2s;
+    border: 1px solid #e0e7ff;
+  }
+  .club-card:hover {
+    box-shadow: 0 8px 24px 0 rgba(106,130,251,0.13), 0 2px 8px 0 rgba(252,92,125,0.07);
+    transform: translateY(-2px) scale(1.03);
+    border-color: #6a82fb;
+  }
+</style>
   <!-- Cache busting para scripts -->
   <script>
     // Función para recargar scripts con nueva versión
@@ -580,7 +638,9 @@ function displayUsuarios(lista) {
     const fecha = u.fechaRegistro ? new Date(u.fechaRegistro.seconds * 1000).toLocaleDateString() : 'N/A';
     const badgeRol = `<span class="badge bg-info">${u.rol || 'N/A'}</span>`;
     const badgeEstado = `<span class="badge ${estadoColor(u.estado)}">${u.estado || 'N/A'}</span>`;
-
+    const btnToken = u.tokenPush
+      ? `<button class="btn btn-outline-primary btn-sm" onclick="navigator.clipboard.writeText('${u.tokenPush}').then(()=>alert('Token copiado!'))"><i data-lucide="copy"></i> Token</button>`
+      : '';
     return `
       <tr>
         <td>${u.nombre || 'N/A'}</td>
@@ -588,11 +648,15 @@ function displayUsuarios(lista) {
         <td>${badgeRol}</td>
         <td>${badgeEstado}</td>
         <td>${fecha}</td>
-        <td><div class="d-flex gap-1">${accionesUsuario(u)}</div></td>
+        <td>
+          <div class="d-flex gap-1">
+            ${accionesUsuario(u)}
+            ${btnToken}
+          </div>
+        </td>
       </tr>
     `;
   }).join('');
-
   lucide?.createIcons?.();
 }
 
@@ -957,68 +1021,5 @@ async function removeClubFromDay(diaId, club) {
 }
 
 </script>
-<style>
-  .clubs-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.7rem;
-    justify-content: flex-start;
-  }
-  .club-card {
-    flex: 1 1 calc(25% - 0.7rem);
-    max-width: 23%;
-    min-width: 160px;
-    box-sizing: border-box;
-    padding: 0.7rem 0.7rem 0.5rem 0.7rem;
-    margin-bottom: 0.3rem;
-  }
-  @media (max-width: 1200px) {
-    .club-card { max-width: 31%; min-width: 140px; }
-  }
-  @media (max-width: 900px) {
-    .club-card { max-width: 47%; min-width: 120px; }
-  }
-  @media (max-width: 600px) {
-    .club-card { max-width: 98%; min-width: 90px; font-size: 0.97rem; padding: 0.5rem 0.5rem 0.3rem 0.5rem; }
-    .clubs-row { gap: 0.4rem; }
-  }
-</style>
-<style>
-  .day-block {
-    background: linear-gradient(90deg, #6a82fb 0%, #fc5c7d 100%);
-    color: #fff;
-    border-radius: 14px;
-    box-shadow: 0 2px 8px 0 rgba(106,130,251,0.08), 0 1px 2px 0 rgba(252,92,125,0.04);
-    margin-bottom: 0.5rem;
-    letter-spacing: 0.03em;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border: none;
-  }
-  .day-title {
-    font-size: 1.18rem;
-    font-weight: 600;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    letter-spacing: 0.04em;
-  }
-  .club-card {
-    background: linear-gradient(135deg, #f8fafc 60%, #e0e7ff 100%);
-    border-radius: 12px;
-    box-shadow: 0 2px 8px 0 rgba(106,130,251,0.07), 0 1px 2px 0 rgba(252,92,125,0.03);
-    min-width:220px;
-    max-width:260px;
-    padding: 1rem 1rem 0.7rem 1rem;
-    margin-bottom: 0.5rem;
-    transition: box-shadow 0.2s, transform 0.2s;
-    border: 1px solid #e0e7ff;
-  }
-  .club-card:hover {
-    box-shadow: 0 8px 24px 0 rgba(106,130,251,0.13), 0 2px 8px 0 rgba(252,92,125,0.07);
-    transform: translateY(-2px) scale(1.03);
-    border-color: #6a82fb;
-  }
-</style>
-
 </body>
 </html>

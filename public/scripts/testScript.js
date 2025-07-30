@@ -38,7 +38,6 @@ export async function testGoogleScript() {
     const res2 = await fetch(url, {
       method: 'POST',
       body: JSON.stringify(testData),
-      headers: { 'Content-Type': 'application/json' }
     });
     resultWithHeader = await res2.text();
   } catch (err) {

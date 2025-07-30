@@ -269,7 +269,8 @@ body.android legend, body.android label { color: #2d3748; }
       </div>
 
       <div class="p-4">
-        <button id="clearCacheBtn" class="w-full py-2 bg-orange-500 text-white rounded">🧹 Limpiar Caché</button>
+       <button id="dailyDashboardBtn" title="Daily Dashboard"><i class="lucide-pie-chart"></i> DailyDashboard</button>
+
       </div>
 
       <div class="p-4 mt-auto">
@@ -282,7 +283,7 @@ body.android legend, body.android label { color: #2d3748; }
   <main id="content" class="p-4 pt-24 pb-28 mb-3"></main>
 
   <!-- NAV INFERIOR -->
-  <nav class="fixed bottom-0 w-full bg-white shadow-t border-t flex justify-between px-1 pt-2 pb-safe z-40 text-xs">
+  <nav class="fixed bottom-3 w-full bg-white shadow-t border-t flex justify-between px-2 pb-4 pt-2 z-40 text-xs">
   <button data-page="home" class="nav-btn flex-1 flex flex-col items-center gap-1 py-2 text-gray-600">
     <i data-lucide="star" class="w-5 h-5"></i><span class="text-[clamp(0.65rem,2vw,0.75rem)] leading-tight">Inicio</span>
   </button>
@@ -299,6 +300,6 @@ body.android legend, body.android label { color: #2d3748; }
     <i data-lucide="martini" class="w-5 h-5"></i><span class="text-[clamp(0.65rem,2vw,0.75rem)] leading-tight">Mesas</span>
   </button>
 </nav>
-
+ <container class="fixed bottom-0 w-full bg-white shadow-t border-t flex justify-between px-2 pb-2 pt-2 z-40 text-xs"></container>
 </body>
 </html>

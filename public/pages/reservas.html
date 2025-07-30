@@ -1,91 +1,80 @@
-<div class="max-w-3xl mx-auto mt-6">
-  <h2 class="text-2xl font-bold mb-4 text-center">Mis Reservas</h2>
-  <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4 p-3 rounded-lg shadow bg-gradient-to-r from-blue-50 to-pink-50 border border-blue-100">
-    <div>
-      <label class="block text-sm font-semibold mb-1 text-blue-900">Ordenar por</label>
-      <select id="ordenReservas" class="form-select form-select-sm rounded shadow-sm border-blue-200">
-        <option value="fecha_desc">Fecha (más reciente)</option>
-        <option value="fecha_asc">Fecha (más antigua)</option>
-        <option value="nombre">Nombre</option>
-        <option value="club">Club</option>
-        <option value="estado">Estado</option>
-      </select>
-    </div>
-    <div>
-      <label class="block text-sm font-semibold mb-1 text-blue-900">Filtrar por estado</label>
-      <select id="filtroEstado" class="form-select form-select-sm rounded shadow-sm border-blue-200">
-        <option value="">Todos</option>
-        <option value="pendiente">Pendiente</option>
-        <option value="confirmada">Confirmada</option>
-        <option value="cancelada">Cancelada</option>
-      </select>
-    </div>
-    <div>
-      <label class="block text-sm font-semibold mb-1 text-blue-900">Buscar</label>
-      <input id="busquedaReservas" type="text" class="form-control form-control-sm rounded shadow-sm border-blue-200" placeholder="Nombre, club, etc...">
+<!-- reservas.html -->
+<h1 class="text-xl font-semibold mb-2" id="tituloTabla">Panel de reservas</h1>
+<div id="encabezadoAcciones" class="mb-3">
+  <button id="csvBtn" class="bg-emerald-600 text-white px-3 py-2 rounded hover:bg-emerald-700">
+    Descargar CSV
+  </button>
+</div>
+<div class="max-w-7xl mx-auto px-4 pt-4 pb-24">
+  <!-- Tabla de reservas NUEVAS (PWA) -->
+  <div>
+    <h3 class="text-lg font-semibold mb-2 flex items-center">
+      <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
+      Reservas Nuevas (PWA)
+    </h3>
+    <div id="tablaReservas" class="bg-white border border-blue-100 rounded-xl shadow-md overflow-x-auto p-4">
+      <p class="text-gray-500 text-center py-6">Cargando reservas…</p>
     </div>
   </div>
-  <div id="tablaReservasPromotor" class="rounded-lg shadow bg-white border border-blue-100 overflow-x-auto">
-    <p class="text-gray-500 p-4">Cargando reservas…</p>
+  
+  <!-- Tabla de reservas LEGACY (importadas) -->
+  <div class="mt-10">
+    <h3 class="text-lg font-semibold mb-2 flex items-center text-orange-800">
+      <span class="inline-block w-2 h-2 rounded-full bg-orange-400 mr-2"></span>
+      Reservas Legacy / Antes de la PWA
+      <span class="ml-2 text-xs bg-orange-100 px-2 py-1 rounded uppercase font-bold tracking-widest">Legacy</span>
+    </h3>
+    <div id="tablaReservasLegacy" class="bg-yellow-50 border border-orange-200 rounded-xl shadow-md overflow-x-auto p-4">
+      <p class="text-gray-500 text-center py-6">Cargando reservas legacy…</p>
+    </div>
   </div>
 </div>
-<script>
-// --- Demo dinámica para tabla de reservas ---
-const reservasDemo = [
-  { nombre: "Juan Pérez", club: "Dreams", fecha: "2025-07-25", estado: "confirmada" },
-  { nombre: "Ana López", club: "Night", fecha: "2025-07-24", estado: "pendiente" },
-  { nombre: "Carlos Ruiz", club: "Dreams", fecha: "2025-07-23", estado: "cancelada" },
-  { nombre: "Lucía Gómez", club: "Night", fecha: "2025-07-22", estado: "confirmada" },
-  { nombre: "Mario Díaz", club: "Dreams", fecha: "2025-07-21", estado: "pendiente" },
-];
 
-function renderReservasTabla(reservas) {
-  if (!reservas.length) {
-    document.getElementById('tablaReservasPromotor').innerHTML = '<p class="text-gray-400 p-4">No hay reservas para mostrar.</p>';
-    return;
-  }
-  let html = `<table class="table table-hover align-middle mb-0">
-    <thead class="bg-gradient-to-r from-blue-100 to-pink-100">
-      <tr>
-        <th>Nombre</th>
-        <th>Club</th>
-        <th>Fecha</th>
-        <th>Estado</th>
-      </tr>
-    </thead>
-    <tbody>`;
-  reservas.forEach(r => {
-    html += `<tr>
-      <td class="fw-semibold">${r.nombre}</td>
-      <td>${r.club}</td>
-      <td>${r.fecha}</td>
-      <td><span class="badge rounded-pill ${r.estado==='confirmada'?'bg-success':r.estado==='pendiente'?'bg-warning text-dark':'bg-danger'}">${r.estado.charAt(0).toUpperCase()+r.estado.slice(1)}</span></td>
-    </tr>`;
-  });
-  html += '</tbody></table>';
-  document.getElementById('tablaReservasPromotor').innerHTML = html;
-}
 
-function filtrarYOrdenar() {
-  let arr = [...reservasDemo];
-  const orden = document.getElementById('ordenReservas').value;
-  const filtro = document.getElementById('filtroEstado').value;
-  const busqueda = document.getElementById('busquedaReservas').value.trim().toLowerCase();
-  if (filtro) arr = arr.filter(r => r.estado === filtro);
-  if (busqueda) arr = arr.filter(r => r.nombre.toLowerCase().includes(busqueda) || r.club.toLowerCase().includes(busqueda));
-  if (orden === 'fecha_desc') arr.sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  else if (orden === 'fecha_asc') arr.sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  else if (orden === 'nombre') arr.sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  else if (orden === 'club') arr.sort((a,b)=>a.club.localeCompare(b.club));
-  else if (orden === 'estado') arr.sort((a,b)=>a.estado.localeCompare(b.estado));
-  renderReservasTabla(arr);
-}
+<!-- Modal Modificación -->
+<div id="modalModificacion" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+    <h2 class="text-lg font-bold mb-4">Solicitar modificación de reserva</h2>
+    <form id="formModificacion" class="space-y-3">
+      <input type="hidden" id="modReservaId">
+      <div>
+        <label class="block font-semibold mb-1">Nuevo nombre cliente</label>
+        <input type="text" id="modNombreCliente" class="w-full border rounded px-2 py-1" required>
+      </div>
+      <div>
+        <label class="block font-semibold mb-1">Nuevo número de personas (Pax)</label>
+        <input type="number" id="modPax" class="w-full border rounded px-2 py-1" min="1" required>
+      </div>
+      <div>
+        <label class="block font-semibold mb-1">Nuevo precio (€)</label>
+        <input type="number" id="modPrecio" class="w-full border rounded px-2 py-1" min="0" required>
+      </div>
+      <div>
+        <label class="block font-semibold mb-1">Motivo (opcional)</label>
+        <textarea id="modMotivo" class="w-full border rounded px-2 py-1"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button type="button" onclick="closeModalModificacion()" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
+        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Enviar solicitud</button>
+      </div>
+    </form>
+    <button onclick="closeModalModificacion()" class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+  </div>
+</div>
 
-document.addEventListener('DOMContentLoaded', () => {
-  renderReservasTabla(reservasDemo);
-  document.getElementById('ordenReservas').onchange = filtrarYOrdenar;
-  document.getElementById('filtroEstado').onchange = filtrarYOrdenar;
-  document.getElementById('busquedaReservas').oninput = filtrarYOrdenar;
-});
-</script>
-
+<!-- Modal Eliminación -->
+<div id="modalEliminacion" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+    <h2 class="text-lg font-bold mb-4">Solicitar eliminación de reserva</h2>
+    <input type="hidden" id="elimReservaId">
+    <div class="mb-3">
+      <label class="block font-semibold mb-1">Motivo (opcional)</label>
+      <textarea id="elimMotivo" class="w-full border rounded px-2 py-1"></textarea>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button type="button" onclick="closeModalEliminacion()" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
+      <button type="button" onclick="enviarSolicitudEliminacion()" class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Enviar solicitud</button>
+    </div>
+    <button onclick="closeModalEliminacion()" class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+  </div>
+</div>

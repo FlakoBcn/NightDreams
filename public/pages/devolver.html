@@ -1,30 +1,12 @@
 <div class="max-w-xl mx-auto mt-6">
   <h2 class="text-2xl font-bold mb-4 text-center">Devoluciones</h2>
   <div id="widgetDevoluciones" class="mb-6 p-4 rounded-lg shadow bg-gradient-to-r from-pink-50 to-blue-50 border border-blue-100 flex flex-col items-center">
-    <div class="text-lg font-semibold text-blue-900 mb-1">Total a devolver (no pagado)</div>
+    <div class="text-lg font-semibold text-blue-900 mb-1">Total a devolver (pagado menos 5€ por pax)</div>
     <div id="valorDevolver" class="text-3xl font-bold text-pink-600">0 €</div>
-    <div class="text-xs text-gray-500 mt-1">Solo reservas no pagadas</div>
+    <div class="text-xs text-gray-500 mt-1">Suma de (pagado - 5*pax) por reserva</div>
   </div>
   <p class="text-gray-600">Próximamente módulo para gestionar devoluciones y reembolsos.</p>
   <p class="text-sm text-gray-400">Aún no está implementado. Contacta con soporte si es urgente.</p>
 </div>
-<script>
-// --- Demo: reservas del promotor actual (simulado)
-const uidPromotor = "demo-uid-123";
-const reservasDemo = [
-  { uid: "demo-uid-123", valor: 50, pagado: false },
-  { uid: "demo-uid-123", valor: 30, pagado: true },
-  { uid: "demo-uid-123", valor: 20, pagado: false },
-  { uid: "otro-uid", valor: 100, pagado: false },
-];
 
-function calcularTotalDevolver(uid) {
-  return reservasDemo.filter(r => r.uid === uid && !r.pagado).reduce((sum, r) => sum + r.valor, 0);
-}
 
-document.addEventListener('DOMContentLoaded', () => {
-  // En producción, reemplaza uidPromotor y reservasDemo por datos reales
-  const total = calcularTotalDevolver(uidPromotor);
-  document.getElementById('valorDevolver').textContent = total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
-});
-</script>

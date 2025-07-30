@@ -1,7 +1,15 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    function isBoss() {
+      return request.auth.token.email == "official.nightdreams@gmail.com";
+    }
+
+    match /{document=**} {
+      allow read, write: if isBoss();
+    }
+
     
 
 
@@ -101,6 +109,15 @@ match /Productos/{productoId} {
       allow write: if isAdmin();
     }
 
+     // /reservas_por_promotor/{promotorId}/reservasLegacy/{resId}
+    match /reservas_por_promotor/{promotorId}/reservasLegacy/{resId} {
+      // Un promotor puede leer sus propias reservas, un admin puede leer todas.
+      allow read: if isSelf(promotorId) || isAdmin();
+      // Un promotor solo puede crear/modificar/borrar sus propias reservas.
+      allow write: if isSelf(promotorId);
+      allow write: if isAdmin();
+    }
+
     // --- Otras Colecciones ---
 
     // /solicitudes_modificacion/{idSol}
@@ -117,5 +134,15 @@ match /Productos/{productoId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+         
+    // Colección de mesas
+    match /mesas/{mesaId} {
+      // Todos los usuarios autenticados pueden LEER las mesas
+      allow read: if request.auth != null;
+      // Solo admin puede CREAR, MODIFICAR o ELIMINAR
+      allow write: if request.auth != null && request.auth.token.role == 'admin';
+    }
   }
+
+
 }

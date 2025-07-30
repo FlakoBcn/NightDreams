@@ -232,6 +232,7 @@ async function mostrarResumen(el) {
 
 async function enviarReserva(el, spinner, success, resumen) {
   spinner.classList.remove('hidden');
+  let procesandoMsg;
   try {
     const fechaObj = new Date(el.fecha.value);
     const id = crypto.randomUUID();
@@ -254,13 +255,28 @@ async function enviarReserva(el, spinner, success, resumen) {
       creadoEn     : firebase.firestore.FieldValue.serverTimestamp()
     };
 
+    // 1. Guardar en Firestore (spinner visible)
     await Promise.all([
       db.collection('reservas').doc(id).set(data),
       db.collection('reservas_por_dia').doc(data.Fecha).collection('reservas').doc(id).set(data),
       db.collection('reservas_por_promotor').doc(data.PromotorUid).collection('reservas').doc(id).set(data)
     ]);
 
-    await fetch('https://script.google.com/macros/s/AKfycbwJSZWWiidAOgs3HxCOiSQPaNyqdygjPUGF5-REGzx3pV-ylYw9Pi4BAGAFDGHEtqZ4GA/exec', {
+    // 2. Ocultar spinner, mostrar éxito y mensaje de "procesando en segundo plano"
+    spinner.classList.add('hidden');
+    resumen.classList.add('hidden');
+    success.classList.remove('hidden');
+    success.scrollIntoView({ behavior: 'smooth' });
+
+    // Crear mensaje visual de "procesando en segundo plano"
+    procesandoMsg = document.createElement('div');
+    procesandoMsg.id = 'procesandoGAS';
+    procesandoMsg.style = 'margin-top:12px; color:#888; font-size:1rem; text-align:center;';
+    procesandoMsg.textContent = 'Procesando en segundo plano...';
+    success.parentNode.insertBefore(procesandoMsg, success.nextSibling);
+
+    // 3. Lanzar fetch a GAS en segundo plano (no await)
+    fetch('https://script.google.com/macros/s/AKfycbwJSZWWiidAOgs3HxCOiSQPaNyqdygjPUGF5-REGzx3pV-ylYw9Pi4BAGAFDGHEtqZ4GA/exec', {
       method: 'POST',
       body: JSON.stringify({ accion: 'guardarReserva', reserva: {
         promoterName: data.Promotor,
@@ -273,21 +289,24 @@ async function enviarReserva(el, spinner, success, resumen) {
         importePagar: data.Precio,
         importePagadoPromotor: data.Pagado,
         emailCliente: data.Email,
-        movilCliente: data.Telefono
-      }}),
-      headers: { 'Content-Type': 'application/json' }
+        movilCliente: data.Telefono,
+        ReservationID: data.ReservationID    // ← IMPORTANTE!
+      }})
+    }).catch(e => {
+      // Opcional: mostrar error en background
+      if (procesandoMsg) procesandoMsg.textContent = 'Error al procesar en segundo plano (GAS)';
     });
 
-    resumen.classList.add('hidden');
-    success.classList.remove('hidden');
-    success.scrollIntoView({ behavior: 'smooth' });
-
     console.log('[Formulario] Reserva guardada correctamente.');
-    timers.push(setTimeout(() => success.classList.add('hidden'), 2500));
-    timers.push(setTimeout(() => init(), 2700));
+    timers.push(setTimeout(() => {
+      success.classList.add('hidden');
+      if (procesandoMsg) procesandoMsg.remove();
+    }, 2000));
+    timers.push(setTimeout(() => init(), 2200));
   } catch (err) {
     console.error('[Reserva] error:', err);
     alert('Error al guardar la reserva');
+    if (procesandoMsg) procesandoMsg.remove();
   } finally {
     spinner.classList.add('hidden');
   }

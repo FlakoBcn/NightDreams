@@ -197,6 +197,29 @@ export const limpiezaTokens = onSchedule(
   }
 );
 
+export const sendManualPush = onRequest({ region: 'us-central1' }, async (req, res) => {
+  const { titulo, cuerpo, tokens } = req.body;
+
+  if (!titulo || !cuerpo || !Array.isArray(tokens)) {
+    return res.status(400).json({ error: 'Faltan datos o formato inválido' });
+  }
+
+  try {
+    const messaging = getMessaging();
+    const result = await messaging.sendEachForMulticast({
+      tokens,
+      notification: { title: titulo, body: cuerpo },
+      data: { type: 'manual' }
+    });
+
+    const enviados = result.responses.filter(r => r.success).length;
+    res.json({ success: true, enviados });
+  } catch (err) {
+    console.error('❌ Error al enviar push:', err);
+    res.status(500).json({ error: 'Error interno al enviar push' });
+  }
+});
+
 // 🧪 API Endpoint de Prueba
 export const testApi = onRequest((req, res) => {
   res.json({
