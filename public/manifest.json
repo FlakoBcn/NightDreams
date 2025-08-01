@@ -1,6 +1,8 @@
 {
   "name": "NightDreams",
   "short_name": "NightDreams",
+  "description": "Sistema de reservas y gestión para NightDreams",
+  "lang": "es",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#ffffff",
