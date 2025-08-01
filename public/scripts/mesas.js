@@ -1,199 +1,211 @@
-// mesas.js – Firestore version NightDreams
 import { loadFirebase } from '/scripts/app.js';
 
 let db;
-let mesas = []; // Todas las mesas en la app (actualizadas en tiempo real)
+let mesas = [];
 
-console.log('[Mesas] Script iniciado NightDreams Firestore');
-
-/* 1️⃣ – Iniciar Firebase y listeners */
-document.addEventListener('DOMContentLoaded', async () => {
+export async function init() {
   const { db: firebaseDb } = await loadFirebase();
   db = firebaseDb;
 
-  listenMesasFirestore(); // Render en tiempo real
+  // Datos de usuario
+  const correo = localStorage.getItem('correo');
+  const uid = localStorage.getItem('uid');
+  const isBoss = correo === 'official.nightdreams@gmail.com';
 
-  // Eventos del formulario y botones (con verificación robusta)
+  // Obtener nombre del promotor desde localStorage (con valor por defecto claro)
+  const nombrePromotor = localStorage.getItem('nombre');
+  const promotorInput = document.getElementById('promotor');
+
+  if (promotorInput) {
+    if (nombrePromotor) {
+      promotorInput.value = nombrePromotor;
+      promotorInput.disabled = true;
+    } else {
+      promotorInput.value = '';
+      promotorInput.placeholder = 'Nombre no encontrado';
+      promotorInput.disabled = true;
+      console.warn('⚠️ Nombre del promotor no encontrado en localStorage.');
+    }
+  }
+
+  setupListeners();
+  listenMesasFirestore();
+}
+
+// Listeners DOM (solo botón Añadir)
+function setupListeners() {
   const btnAddMesa = document.getElementById('addMesaBtn');
-  const btnClearMesas = document.getElementById('clearMesasBtn');
-
-  if (btnAddMesa && btnClearMesas) {
+  if (btnAddMesa) {
     btnAddMesa.onclick = addMesaFromForm;
-    btnClearMesas.onclick = clearAllMesas;
   } else {
-    console.error('🔴 Error: Botones Añadir o Limpiar no encontrados.');
+    console.error('🔴 Error: Botón "Añadir" no encontrado.');
   }
 
-  // Validación en tiempo real para el botón “Añadir”
-  const inputs = document.querySelectorAll('#clienteMesa, #paxMesa, #precioMesa, #promotorMesa, #numMesa');
-  if (inputs.length === 5) {
-    inputs.forEach(input => input.addEventListener('input', validarFormularioMesas));
-  } else {
-    console.error('🔴 Error: Campos del formulario no encontrados.');
-  }
-
+  // Validación de formulario
+  const inputs = document.querySelectorAll('#clienteMesa, #paxMesa, #precioMesa, #numMesa');
+  inputs.forEach(input => input.addEventListener('input', validarFormularioMesas));
   validarFormularioMesas();
 
-  // Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(()=>{});
   }
 
-  // Iconos Lucide
   if (window.lucide) window.lucide.createIcons();
-});
-
-/* 2️⃣ – Escuchar y renderizar en tiempo real */
-function listenMesasFirestore() {
-  db.collection('mesas').orderBy('timestamp', 'asc')
-    .onSnapshot(snapshot => {
-      mesas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      renderMesas();
-    });
 }
 
-/* 3️⃣ – Añadir una nueva mesa */
-// Lógica para el botón "Añadir"
+// Escuchar cambios Firestore
+function listenMesasFirestore() {
+  db.collection('mesas').orderBy('creadoEn', 'asc').onSnapshot(snapshot => {
+    mesas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderMesas();
+  });
+}
+
+// Añadir mesa desde formulario
 async function addMesaFromForm() {
   const cliente = document.getElementById('clienteMesa').value.trim();
   const pax = document.getElementById('paxMesa').value.trim();
   const precio = document.getElementById('precioMesa').value.trim();
-  const promotor = document.getElementById('promotorMesa').value.trim();
   const mesa = document.getElementById('numMesa').value.trim();
 
-  // Validar campos
-  if (!cliente || !pax || !precio || !promotor || !mesa) {
-    alert('Por favor, completa todos los campos.');
+  const promotor = localStorage.getItem('nombre') || 'Desconocido';
+  const promotorUid = localStorage.getItem('uid') || 'uid-desconocido';
+
+  if (!cliente || !pax || !precio || !mesa) {
+    alert('🔴 Completa todos los campos obligatorios.');
     return;
   }
 
-  const yaExiste = mesas.some(r =>
+  const existeReserva = mesas.some(r =>
     r.cliente === cliente &&
     r.mesa === mesa &&
-    r.promotor === promotor &&
+    r.promotorUid === promotorUid &&
     r.estado === 'pendiente'
   );
 
-  if (yaExiste) {
-    alert('Ya existe una reserva PENDIENTE para este cliente/mesa/promotor');
+  if (existeReserva) {
+    alert('⚠️ Ya existe una reserva pendiente igual.');
     return;
   }
 
-
   try {
     await db.collection('mesas').add({
-      cliente, pax, precio, promotor, mesa,
+      cliente,
+      pax,
+      precio,
+      promotor,
+      promotorUid,
+      mesa,
       estado: 'pendiente',
-      timestamp: Date.now()
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    ['clienteMesa','paxMesa','precioMesa','promotorMesa','numMesa']
-      .forEach(id => document.getElementById(id).value = '');
-
+    // Limpiar campos tras guardar
+    ['clienteMesa', 'paxMesa', 'precioMesa', 'numMesa'].forEach(id => document.getElementById(id).value = '');
     validarFormularioMesas();
 
-  } catch (e) {
-    alert('Error al guardar la reserva en la nube');
-    console.error(e);
+  } catch (error) {
+    alert('❌ Error al guardar la reserva.');
+    console.error(error);
   }
 }
 
-
-/* 4️⃣ – Renderizar las mesas (pendiente, confirmadas, rechazadas) */
+// Render mesas
 function renderMesas() {
-  const pendientes = mesas.filter(m => m.estado === 'pendiente');
-  const confirmadas = mesas.filter(m => m.estado === 'confirmada');
-  const rechazadas = mesas.filter(m => m.estado === 'rechazada');
+  renderListaMesas(mesas.filter(m => m.estado === 'pendiente'), 'listaEnCola', 'pendiente');
+  renderListaMesas(mesas.filter(m => m.estado === 'confirmada'), 'listaConfirmadas', 'confirmada');
+  renderListaMesas(mesas.filter(m => m.estado === 'rechazada'), 'listaRechazadas', 'rechazada');
 
-  renderListaMesas(pendientes,   'listaEnCola',       'pendiente');
-  renderListaMesas(confirmadas,  'listaConfirmadas',  'confirmada');
-  renderListaMesas(rechazadas,   'listaRechazadas',   'rechazada');
-
-  if (window.lucide && window.lucide.createIcons) {
-    setTimeout(() => window.lucide.createIcons({ attrs: { class: 'lucide', width: 22, height: 22 } }), 0);
-  }
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function renderListaMesas(mesas, idLista, estado) {
   const ul = document.getElementById(idLista);
   if (!ul) return;
-  ul.innerHTML = '';
-  mesas.forEach((r, idx) => ul.appendChild(makeReservaItem(r, idx + 1, estado)));
+  ul.innerHTML = mesas.map((r, idx) => makeReservaItem(r, idx + 1, estado)).join('');
 }
 
-/* 5️⃣ – Crear el item de mesa con acciones */
+// Generar HTML de reserva
 function makeReservaItem(reserva, num, estado) {
-  const li = document.createElement('li');
-  li.className = 'mesa-card mb-3 p-0';
+  const mensaje = `${reserva.cliente}-${reserva.pax} pax-${reserva.precio}€-${reserva.promotor}-mesa ${reserva.mesa}`;
 
-  const mensaje = `✅ *Reserva ${estado.toUpperCase()} NightDreams*\n` +
-    `*Cliente:* ${reserva.cliente}\n*Mesa:* ${reserva.mesa}\n*PAX:* ${reserva.pax}\n*Precio:* ${reserva.precio}€\n*Promotor:* ${reserva.promotor}`;
+  const acciones = estado === 'pendiente'
+    ? `<button class="mesa-btn-in btn btn-success px-4 py-2 rounded-xl shadow"><i data-lucide="check-circle"></i> IN</button>
+       <button class="mesa-btn-out btn btn-danger px-4 py-2 rounded-xl shadow"><i data-lucide="x-circle"></i> OUT</button>`
+    : `<button class="mesa-btn-copy btn btn-success px-3 py-2 rounded-xl shadow" data-wa-msg="${mensaje}">
+        <span style="display:inline-flex;align-items:center;justify-content:center;background:#25D366;border-radius:4px;padding:2px;width:1.7em;height:1.7em;">
+          <i data-lucide='message-circle' style="color:#fff;width:1.2em;height:1.2em;"></i>
+        </span>
+      </button>`;
 
-  const btnCopiaGrupo = (estado !== 'pendiente') ? `
-    <button class="mesa-btn-copy btn btn-secondary px-3 py-2 rounded-xl shadow"
-      data-wa-msg="${mensaje}">
-      <i data-lucide="clipboard"></i>
-    </button>` : '';
-
-  const acciones = estado === 'pendiente' ? `
-    <button class="mesa-btn-in btn btn-success px-4 py-2 rounded-xl shadow"><i data-lucide="check-circle"></i> IN</button>
-    <button class="mesa-btn-out btn btn-danger px-4 py-2 rounded-xl shadow"><i data-lucide="x-circle"></i> OUT</button>`
-  : btnCopiaGrupo;
-
-  li.innerHTML = `
+  return `
+  <li class="mesa-card mb-3 p-0" data-id="${reserva.id}">
     <div class="mesa-card-inner flex justify-between gap-2 p-3 rounded-2xl shadow bg-gradient-to-br from-white to-indigo-50">
       <div>
         <span class="mesa-num bg-indigo-600 text-white rounded-full px-3 py-1 shadow">#${num}</span>
         <span class="mesa-cliente">${escapeHtml(reserva.cliente)}</span>
-        <span class="mesa-pax">👥${escapeHtml(reserva.pax)}</span>
-        <span class="mesa-precio">💲${escapeHtml(reserva.precio)}</span>
-        <span class="mesa-promotor">👤${escapeHtml(reserva.promotor)}</span>
-        <span class="mesa-numero">🍽️${escapeHtml(reserva.mesa)}</span>
+        <span class="mesa-pax">👥 ${escapeHtml(reserva.pax)}</span>
+        <span class="mesa-precio">💲 ${escapeHtml(reserva.precio)}</span>
+        <span class="mesa-promotor">👤 ${escapeHtml(reserva.promotor)}</span>
+        <span class="mesa-numero">🍽️ ${escapeHtml(reserva.mesa)}</span>
       </div>
       <div>${acciones}</div>
-    </div>`;
+    </div>
+  </li>`;
+}
 
-  if (estado === 'pendiente') {
-    li.querySelector('.mesa-btn-in').onclick  = () => cambiarEstadoMesa(reserva.id, 'confirmada');
-    li.querySelector('.mesa-btn-out').onclick = () => cambiarEstadoMesa(reserva.id, 'rechazada');
-  } else {
-    li.querySelector('.mesa-btn-copy').onclick = () => copiarMensajeGrupo(mensaje);
+// Cambiar estado de la mesa
+document.addEventListener('click', async (e) => {
+  const item = e.target.closest('button');
+  if (!item) return;
+
+  const li = item.closest('li.mesa-card');
+  if (!li) return;
+
+  const reservaId = li.getAttribute('data-id');
+  const mesaActual = mesas.find(m => m.id === reservaId);
+  if (!mesaActual) return;
+
+  if (item.classList.contains('mesa-btn-in')) {
+    await db.collection('mesas').doc(mesaActual.id).update({ estado: 'confirmada' });
+  } else if (item.classList.contains('mesa-btn-out')) {
+    await db.collection('mesas').doc(mesaActual.id).update({ estado: 'rechazada' });
+  } else if (item.classList.contains('mesa-btn-copy')) {
+    copiarMensajeGrupo(item.dataset.waMsg);
   }
-  return li;
-}
+});
 
-/* 6️⃣ – Cambiar estado de la mesa */
-async function cambiarEstadoMesa(mesaId, nuevoEstado) {
-  await db.collection('mesas').doc(mesaId).update({ estado: nuevoEstado });
-}
-
-/* 7️⃣ – Copiar mensaje para grupo WhatsApp */
+// Copiar mensaje WhatsApp
 function copiarMensajeGrupo(msg) {
-  navigator.clipboard.writeText(msg).then(() => alert('¡Mensaje copiado!')).catch(console.error);
+  navigator.clipboard.writeText(msg)
+    .then(() => {
+      alert('📋 Mensaje copiado. Se abrirá WhatsApp Web.');
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    })
+    .catch(console.error);
 }
 
-/* 8️⃣ – Limpiar todas las mesas (admin) */
-async function clearAllMesas() {
-  if (!confirm('¿Borrar todas las reservas?')) return;
-  const snapshot = await db.collection('mesas').get();
-  const batch = db.batch();
-  snapshot.forEach(doc => batch.delete(doc.ref));
-  await batch.commit();
-  alert('Todas las reservas borradas.');
-}
-
-/* 9️⃣ – Validación del formulario */
+// Validación formulario
 function validarFormularioMesas() {
-  const campos = ['clienteMesa','paxMesa','precioMesa','promotorMesa','numMesa'];
+  const campos = ['clienteMesa', 'paxMesa', 'precioMesa', 'numMesa'];
   document.getElementById('addMesaBtn').disabled = !campos.every(id => document.getElementById(id).value.trim());
 }
 
-/* 🔧 – Utilidades */
+// Escape seguro HTML
 function escapeHtml(str) {
   return String(str).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 }
 
-  // Refresh iconos Lucide
-  if (window.lucide) {
-    window.lucide.createIcons();
+// Inicializar al cargar el script
+firebase.auth().onAuthStateChanged(async user => {
+  if (user) {
+    // Almacenar UID y correo en localStorage
+    localStorage.setItem('uid', user.uid);
+    localStorage.setItem('correo', user.email);
+
+    // Inicializar lógica de mesas
+    await init();
+  } else {
+    console.warn('🔴 Usuario no autenticado.');
   }
+});

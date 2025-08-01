@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel Boss - NightDreams (Solicitudes Eliminación)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { background: #f8f9fa; }
+    .logo-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; font-weight: 500; }
+    .shadow-box { background: white; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); padding: 24px; margin-top: 32px; }
+    .table th, .table td { vertical-align: middle; }
+    pre { margin-bottom: 0; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <div class="mb-4 d-flex justify-content-between align-items-center">
+      <h1 class="logo-font">🗑️ Solicitudes Eliminación</h1>
+      <a href="index.html" class="btn btn-outline-dark">Volver</a>
+    </div>
+
+    <div class="shadow-box">
+      <div id="tablaSolicitudes">Cargando solicitudes...</div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+    <div id="mainToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body" id="mainToastBody"></div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-messaging-compat.js"></script>
+
+  <script>
+
+    // --- Configuración directa de Firebase y VAPID_KEY ---
+    const VAPID_KEY = 'BJklec5TmcAlNhPnCeyTRbDV44eDLHH-pTWcSRFYZw0E6RZI4PG6vbijPmnZcrkUDzc2z365GEksr8rNX8lePdo';
+    function initializeFirebase() {
+      const firebaseConfig = {
+        apiKey: "AIzaSyAojJehdlYbQjfpjaDPCh-59y0rZG-fM34",
+        authDomain: "nightdreams-f90b0.firebaseapp.com",
+        projectId: "nightdreams-f90b0",
+        storageBucket: "nightdreams-f90b0.appspot.com",
+        messagingSenderId: "1011859565794",
+        appId: "1:1011859565794:web:f9a5faa6ea2a10f47202bb"
+      };
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      window.auth = firebase.auth();
+      window.db = firebase.firestore();
+      window.messaging = firebase.messaging.isSupported() ? firebase.messaging() : null;
+
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) return (window.location.href = "access.html");
+        const userDoc = await db.collection('usuarios').doc(user.uid).get();
+        if (!userDoc.exists) {
+          document.body.innerHTML = '<div class="p-5 text-center text-danger">Acceso denegado</div>';
+          return;
+        }
+        const userData = userDoc.data();
+        // Solo boss
+        const isBoss = userData.correo === 'official.nightdreams@gmail.com';
+        if (isBoss) {
+          await cargarSolicitudesEliminacion();
+          return;
+        }
+        document.body.innerHTML = '<div class="p-5 text-center text-danger">Acceso denegado</div>';
+      });
+    }
+
+    // ─────────────────────────────
+    // 🔥 MAGIA: renderiza cualquier colección
+    async function cargarSolicitudesEliminacion() {
+      const cont = document.getElementById('tablaSolicitudes');
+      try {
+        console.log('[LOG] Iniciando carga de solicitudes de eliminación...');
+        const snap = await db.collection('solicitudes_eliminacion').orderBy('timestamp', 'desc').get();
+        console.log(`[LOG] Total solicitudes encontradas: ${snap.size}`);
+        if (snap.empty) {
+          cont.innerHTML = '<p class="text-muted text-center">No hay solicitudes pendientes.</p>';
+          console.log('[LOG] No hay solicitudes pendientes.');
+          return;
+        }
+        // Colecta todas las claves posibles de todos los docs
+        const allFields = new Set();
+        const docs = [];
+        snap.forEach(doc => {
+          const data = doc.data();
+          data._docId = doc.id; // id real del doc
+          docs.push(data);
+          Object.keys(data).forEach(k => allFields.add(k));
+        });
+        allFields.add('_docId'); // añade el id como columna extra
+        console.log('[LOG] Campos detectados en documentos:', [...allFields]);
+        console.log('[LOG] Documentos:', docs);
+
+        // Cabecera dinámica
+        let html = `
+          <div class="overflow-x-auto">
+            <table class="table table-bordered">
+              <thead class="table-light">
+                <tr>
+                  ${[...allFields].map(f => `<th>${f}</th>`).join('')}
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        docs.forEach((d, idx) => {
+          html += '<tr>';
+          [...allFields].forEach(f => {
+            let val = d[f];
+            // Detecta y pinta timestamp Firestore
+            if (val && typeof val === 'object' && val.seconds && val.nanoseconds !== undefined) {
+              val = new Date(val.seconds * 1000).toLocaleString();
+            }
+            // Si es objeto o array
+            else if (typeof val === 'object' && val !== null) {
+              val = `<pre style="white-space: pre-wrap;">${JSON.stringify(val)}</pre>`;
+            }
+            html += `<td>${val !== undefined ? val : '-'}</td>`;
+          });
+          html += `<td>
+            <button class="btn btn-sm btn-success me-1" onclick="actualizarSolicitud('${d._docId}', 'aprobado')">✔️</button>
+            <button class="btn btn-sm btn-danger" onclick="actualizarSolicitud('${d._docId}', 'rechazado')">✖️</button>
+          </td>`;
+          html += '</tr>';
+        });
+
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        cont.innerHTML = html;
+        console.log('[LOG] Tabla renderizada correctamente.');
+
+      } catch (error) {
+        cont.innerHTML = '<div class="text-danger text-center">❌ Error al cargar solicitudes.</div>';
+        console.error('[ERROR] Error al cargar solicitudes:', error);
+      }
+    }
+
+    // Función global (necesario para los botones)
+    async function actualizarSolicitud(docId, estado) {
+      try {
+        console.log(`[LOG] Actualizando solicitud ${docId} a estado: ${estado}`);
+        await db.collection('solicitudes_eliminacion').doc(docId).update({
+          estado: estado,
+          fechaAtendida: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`[LOG] Solicitud ${docId} actualizada correctamente.`);
+        showToast('✅ Solicitud actualizada correctamente.', 'success');
+        cargarSolicitudesEliminacion();
+      } catch (error) {
+        console.error(`[ERROR] Error al actualizar solicitud ${docId}:`, error);
+        showToast('❌ Error al actualizar la solicitud.', 'danger');
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const toastEl = document.getElementById('mainToast');
+      const toastBody = document.getElementById('mainToastBody');
+      toastBody.textContent = message;
+      toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+      const toast = new bootstrap.Toast(toastEl);
+      toast.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeFirebase();
+    });
+  </script>
+
+
+<div id="widgetPushContainer" style="margin-top:4vh;">
+  <style>
+    .card { border-radius: 20px; box-shadow: 0 4px 20px 0 #dde; }
+    .logo-font { font-family: 'Orbitron', sans-serif; font-size: 1.3em; }
+    .btn { border-radius: 10px; font-weight: 500; }
+  </style>
+  <div class="container" style="margin-top:2vh;">
+    <h1 class="logo-font mb-4">📢 Notificación Manual</h1>
+    <div class="card mb-4">
+      <div class="mb-3">
+        <label class="form-label">Título</label>
+        <input type="text" id="tituloPush" class="form-control" placeholder="Ej: Cambio de precios" />
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Mensaje</label>
+        <textarea id="cuerpoPush" rows="3" class="form-control" placeholder="Mensaje para los promotores..."></textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Tokens de destinatarios</label>
+        <textarea id="tokensPush" rows="4" class="form-control" placeholder="Pega aquí uno o más tokens separados por coma o nueva línea"></textarea>
+      </div>  
+    </div>
+    <button id="btnEnviarPushManual" class="btn btn-primary w-100">
+      Enviar Notificación
+    </button>
+  </div>
+  <div class="text-center mt-4">
+    <button class="btn btn-outline-secondary" id="cerrarWidgetPushBtn">← Cerrar</button>
+  </div>
+  <script>
+    const PUSH_API_ENDPOINT = 'https://us-central1-nightdreams-f90b0.cloudfunctions.net/sendManualPush'; // Asegúrate del nombre
+
+async function sendManualPush() {
+  const titulo = document.getElementById('tituloPush').value.trim();
+  const cuerpo = document.getElementById('cuerpoPush').value.trim();
+  const tokensInput = document.getElementById('tokensPush').value.trim();
+
+  const tokens = tokensInput
+    .split(/[\n,]+/)
+    .map(t => t.trim())
+    .filter(t => t.length > 0);
+
+  if (!titulo || !cuerpo || tokens.length === 0) {
+    alert('Completa todos los campos y pega al menos un token válido.');
+    return;
+  }
+
+  try {
+    const res = await fetch(PUSH_API_ENDPOINT, {
+      method: 'POST',
+       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titulo, cuerpo, tokens })
+    });
+
+    if (res.ok) {
+      showToast('✅ Notificación enviada correctamente.', 'success');
+      document.getElementById('tituloPush').value = '';
+      document.getElementById('cuerpoPush').value = '';
+      document.getElementById('tokensPush').value = '';
+    } else {
+      const error = await res.json().catch(() => ({}));
+      showToast('❌ Error: ' + (error?.error || error || 'Desconocido'), 'danger');
+    }
+  } catch (err) {
+    showToast('❌ Error de conexión: ' + err.message, 'danger');
+    console.error(err);
+  }
+}
+
+
+    document.getElementById('btnEnviarPushManual').onclick = sendManualPush;
+
+    document.getElementById('cerrarWidgetPushBtn').onclick = () => {
+      document.getElementById('widgetPushContainer').style.display = 'none';
+    };
+  </script>
+</div>
+
+</body>
+</html>

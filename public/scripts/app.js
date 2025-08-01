@@ -4,7 +4,6 @@
 /*─────────────────────────────────────────────────────────────*/
 console.time('[ND] startup');
 
-/* FIREBASE - LAZY LOAD *********************************************************/
 let firebase, auth, db, messaging;
 let firebaseReady = false;
 
@@ -12,7 +11,7 @@ const firebaseConfig = {
   apiKey           : 'AIzaSyAojJehdlYbQjfpjaDPCh-59y0rZG-fM34',
   authDomain       : 'nightdreams-f90b0.firebaseapp.com',
   projectId        : 'nightdreams-f90b0',
-  storageBucket    : 'nightdreams-f90b0.appspot.com',             // ✔ dominio corregido
+  storageBucket    : 'nightdreams-f90b0.appspot.com',
   messagingSenderId: '1011859565794',
   appId            : '1:1011859565794:web:f9a5faa6ea2a10f47202bb',
   measurementId    : 'G-NHMYKW05DT'
@@ -21,47 +20,29 @@ const firebaseConfig = {
 export async function loadFirebase() {
   if (firebaseReady) return { auth, db, messaging };
 
-  console.log('🔥  Firebase loading…');
-
-  /* 1️⃣ Importar SDK Compat ES Modules */
-  if (!window.firebase) {
-    // firebase‑app
-    const appMod = await import('https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js');
-    window.firebase = appMod.default ?? appMod.firebase ?? appMod;   // ← asegura global
-
-    // resto de compat‑SDK
-    await Promise.all([
-      import('https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js'),
-      import('https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js'),
-      import('https://www.gstatic.com/firebasejs/10.12.1/firebase-messaging-compat.js')
-    ]);
-  }
-
+  // Firebase ya está cargado por el HTML, solo inicializa la app si hace falta:
   firebase = window.firebase;
 
-  /* 2️⃣ Inicializar solo si no existe App */
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig);
   }
 
   auth = firebase.auth();
   db   = firebase.firestore();
-
-  /* 3️⃣ Messaging solo si está soportado */
   messaging = (firebase.messaging.isSupported?.())
       ? firebase.messaging()
       : null;
 
   firebaseReady = true;
   console.log('✅ Firebase ready');
-
-  // 👉 deja los objetos accesibles para otros módulos
   return { auth, db, messaging };
 }
 
-/* 4️⃣ Exports que necesitan otros scripts */
-// Exportar referencias directas para compatibilidad con scripts que requieren acceso inmediato a los objetos Firebase
+// Exportar referencias
 export { db, auth, messaging };
+
+
+
 
 /* VAPID para notificaciones */
 /**
@@ -69,22 +50,38 @@ export { db, auth, messaging };
  * It should be passed when requesting the FCM token for web push notifications.
  */
 const VAPID_KEY = 'BJklec5TmcAlNhPnCeyTRbDV44eDLHH-pTWcSRFYZw0E6RZI4PG6vbijPmnZcrkUDzc2z365GEksr8rNX8lePdo';
-
+function isInStandaloneMode() {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true
+  );
+}
 /* SERVICE WORKER ***********************************************************/
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
-    .then(existingRegistration => {
-      if (existingRegistration) {
-        console.log('[SW] Service Worker already registered:', existingRegistration.scope);
-      } else {
-        console.log('[SW] Registering new Service Worker...');
-        navigator.serviceWorker.register('/firebase-messaging-sw.js')
-          .then(r => console.log('[SW] Registered successfully:', r.scope))
-          .catch(err => console.warn('[SW] Registration failed:', err));
-      }
-    })
-    .catch(err => console.error('[SW] Error checking existing registration:', err));
+  if (isInStandaloneMode()) {
+    // SOLO registra el SW si es PWA
+    navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+      .then(existingRegistration => {
+        if (existingRegistration) {
+          console.log('[SW] Service Worker already registered:', existingRegistration.scope);
+        } else {
+          console.log('[SW] Registering new Service Worker...');
+          navigator.serviceWorker.register('/firebase-messaging-sw.js')
+            .then(r => console.log('[SW] Registered successfully:', r.scope))
+            .catch(err => console.warn('[SW] Registration failed:', err));
+        }
+      })
+      .catch(err => console.error('[SW] Error checking existing registration:', err));
+  } else {
+    // Si NO es PWA, elimina cualquier SW existente
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(reg => reg.unregister());
+    });
+    // Limpia tokens FCM de localStorage para evitar residuos
+    localStorage.removeItem('fcmToken');
+  }
 }
+
 
 /* CONEXIÓN *****************************************************************/
 let isOnline = navigator.onLine;
@@ -251,7 +248,7 @@ async function initAuth() {
   });
 }
 
-    console.log('[AUTH] ✅ Acceso concedido y UI actualizada');
+   
 /**
  * Updates the user interface with the current user's information and role.
  * @param {string} nombre - The user's display name.
@@ -264,13 +261,14 @@ function updateUserUI(nombre, correo, rol, isAdmin) {
   const userEmailEl = document.getElementById('userEmail');
   const userCatEl = document.getElementById('userRole');
   const adminPanelEl = document.getElementById('adminPanelBtnWrapper');
-  
+  const bossBtnEl = document.getElementById('panelBossBtnWrapper');
+
   if (userNameEl) userNameEl.textContent = nombre;
   if (userEmailEl) userEmailEl.textContent = correo;
   if (userCatEl) userCatEl.textContent = rol || 'Promotor';
-  if (isAdmin && adminPanelEl) {
-    adminPanelEl.classList.remove('hidden');
-  }
+  if (isAdmin && adminPanelEl) adminPanelEl.classList.remove('hidden');
+  // Solo el correo especial puede ver el botón Boss
+  if (correo === 'official.nightdreams@gmail.com' && bossBtnEl) bossBtnEl.classList.remove('hidden');
   // --- CONTROL VISIBILIDAD DEL BOTÓN LOGOUT SEGÚN ROL ---
   // Para ocultar el logout a promotores, descomenta el siguiente bloque:
   /*
@@ -379,6 +377,7 @@ function initEventListeners() {
       if (perm !== 'granted') return alert('Permiso de notificación denegado.');
        const token = await getFcmToken();
     if (token) localStorage.setItem('fcmToken', token);
+     notifBtn.style.display = 'none'; // Oculta el botón tras activar
       alert('Notificaciones activadas ✔️');
     });
   }
@@ -398,6 +397,25 @@ function closeSidebar() {
 async function clearAppCache() {
   if (!confirm('¿Recargar la app?')) return;
   location.reload();
+}
+
+function checkNotificationStatus() {
+  const notifBtn = document.getElementById('notificacionesBtn');
+  const token = localStorage.getItem('fcmToken');
+  if (!notifBtn) return;
+  if (token) {
+    notifBtn.style.display = 'none';
+    return;
+  }
+  if (!isInStandaloneMode()) {
+    notifBtn.disabled = true;
+    notifBtn.title = "Instala la app para activar las notificaciones";
+    notifBtn.style.opacity = 0.5;
+  } else {
+    notifBtn.disabled = false;
+    notifBtn.title = "";
+    notifBtn.style.display = '';
+  }
 }
 
 /* NOTIFICATIONS ************************************************************/
@@ -427,18 +445,47 @@ async function getFcmToken() {
 }
 
 /* MESSAGING - Notificaciones en primer plano ******************************/
-async function initMessaging() {
-  if (!messaging) return;                  // ← evita fallo Safari
+function mostrarBannerNotificacion(title, body) {
+  document.getElementById('bannerNotiTitle').textContent = title || '🔔 Notificación';
+  document.getElementById('bannerNotiBody').textContent = body || '';
+  const banner = document.getElementById('bannerNotificacion');
+  banner.style.display = 'block';
 
+  // Oculta automáticamente después de 5 segundos
+  clearTimeout(window.bannerTimeout);
+  window.bannerTimeout = setTimeout(() => {
+    banner.style.display = 'none';
+  }, 5000);
+}
+
+function cerrarBannerNotificacion() {
+  document.getElementById('bannerNotificacion').style.display = 'none';
+}
+document.getElementById('cerrarBannerNoti').onclick = cerrarBannerNotificacion;
+
+async function initMessaging() {
+  if (!messaging) return;
+
+  // Notificación directa primer plano (cuando app abierta)
   messaging.onMessage(payload => {
     console.log('[FCM] Notificación en primer plano:', payload);
-    
-    // Mostrar notificación personalizada
-    if (payload.notification) {
-      new Notification(payload.notification.title ?? 'NightDreams', {
-        body: payload.notification.body,
-        icon: '/icon-192.png'
-      });
+
+    if (payload.data) {
+      mostrarBannerNotificacion(
+        payload.data.title ?? 'NightDreams',
+        payload.data.body ?? ''
+      );
+    }
+  });
+
+  // Escucha eventos PUSH_IN_APP desde Service Worker
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'PUSH_IN_APP') {
+      const data = event.data.payload.data;
+      mostrarBannerNotificacion(
+        data.title || 'NightDreams',
+        data.body || ''
+      );
     }
   });
 }
@@ -446,6 +493,7 @@ async function initMessaging() {
 /* INIT APP *****************************************************************/
 async function initializeDOM() {
   initDOM();
+  checkNotificationStatus();
   initEventListeners();
 }
 

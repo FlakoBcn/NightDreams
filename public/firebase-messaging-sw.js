@@ -4,7 +4,7 @@
 /* ---------------------------------------------------------------------------------------- */
 
 /* ---------- 1. Cache offline (online‑only salvo /offline.html) -------------------------- */
-const CACHE = 'nd-v11.0.0';
+const CACHE = 'nd-v19.0.0';
 const OFFLINE_URL = '/offline.html';
 
 self.addEventListener('install', event => {
@@ -76,33 +76,37 @@ const broadcast = (type, payload = {}) =>
 
 /* ---------- 3.1 Push (data‑only) recibido ----------------------------------------------- */
 messaging.onBackgroundMessage(payload => {
-  const { data = {}, notification = {} } = payload;
+  const { data = {} } = payload;
 
-  // 🔇 Elimina notificación duplicada generada por Firebase
-  delete payload.notification;
-  // ① Si hay una ventana visible → solo broadcast (sin notificación)
   self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     .then(clientsArr => {
       const visible = clientsArr.some(c => c.visibilityState === 'visible');
       if (visible) {
-        broadcast('PUSH_IN_APP', { data, notification });
+        broadcast('PUSH_IN_APP', { data });
         return;
       }
 
-      // ② Mostrar notificación
-      const title = notification.title || data.title || 'NightDreams';
-      const options = {
-        body  : notification.body  || data.body  || '',
-        icon  : notification.icon  || data.icon  || '/icon-192.png',
-        badge : '/icon-192.png',
-        tag   : data.tag || 'nightdreams-push',
-        data,                           // se re‑envía todo el objeto
-        actions: JSON.parse(data.actions || '[]'),
-        renotify: true                  // sustituye si tag coincide
-      };
+      const title = data.title || 'NightDreams';
+      let actions = [];
+try {
+  actions = JSON.parse(data.actions || '[]');
+} catch (e) {
+  actions = [];
+}
+
+const options = {
+  body  : data.body || '',
+  icon  : data.icon || '/icon-192.png',
+  badge : '/badge.png',
+  tag   : data.tag || 'nightdreams-push',
+  data,
+  actions,
+  renotify: true
+};
       self.registration.showNotification(title, options);
     });
 });
+
 
 /* ---------- 3.2 Acciones de la notificación --------------------------------------------- */
 self.addEventListener('notificationclick', event => {
@@ -123,4 +127,4 @@ self.addEventListener('notificationclick', event => {
   })());
 });
 
-console.info('[SW] NightDreams v37.0.0 activo (offline + FCM)');
+console.info('[SW] NightDreams activo (offline + FCM)');

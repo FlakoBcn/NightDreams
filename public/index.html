@@ -1,213 +1,97 @@
 <!DOCTYPE html>
 <html lang="es">
-<!-- Tipografía - solo cuando se necesita -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
- 
-
-  <!-- Iconos Lucide - carga bajo demanda -->
-  <script>
-    // Cargar Lucide solo cuando sea necesario
-    function loadLucide() {
-      if (!window.lucide) {
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/lucide@latest/dist/umd/lucide.js';
-        script.onload = () => lucide.createIcons();
-        document.head.appendChild(script);
-      }
-    }
-  </script>
-
-  <!-- Firebase SDK - carga bajo demanda -->
-  <script>
-    // Cargar Firebase solo cuando se necesite autenticación
-    let firebaseLoaded = false;
-    function loadFirebase() {
-      if (firebaseLoaded) return Promise.resolve();
-      
-      firebaseLoaded = true;
-      console.log('📦 Cargando Firebase bajo demanda...');
-      
-      return Promise.all([
-        loadScript('https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js'),
-        loadScript('https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js'),
-        loadScript('https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js'),
-        loadScript('https://www.gstatic.com/firebasejs/10.12.1/firebase-messaging-compat.js')
-      ]);
-    }
-    
-    function loadScript(src) {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-    }
-  </script>
-
-  <!-- App principal - carga inmediatamente -->
-  <script type="module" src="scripts/app.js"></script>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="Cache-Control" content="no-cache, no-store">
+  <meta name="theme-color" content="#ffffff">
   <title>NightDreams</title>
 
-  <!-- PWA -->
+  <!-- PWA Manifest & Icon -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
 
-  <!-- Estilos principales -->
+  <!-- TailwindCSS & estilos propios -->
   <link rel="stylesheet" href="styles/main.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
 
-  <!-- Tipografía -->
+  <!-- Fuentes Google (Orbitron) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400&display=swap" rel="stylesheet">
 
-  <!-- Iconos Lucide -->
+  <!-- Lucide Icons (defer para no bloquear render) -->
   <script defer src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- Firebase SDK (Compat, una sola vez) -->
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.1/firebase-messaging-compat.js"></script>
+  <!-- Firebase SDK (Compat, pre-cargado, sin lazy) -->
+ <script defer src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
 
-  <!-- Lógica principal (ES module) -->
-  <script type="module" defer src="scripts/app.js"></script>
+  <!-- App principal (ES module, va al final para asegurar dependencias listas) -->
+  <script type="module" src="scripts/app.js"></script>
 
+  <!-- CSS crítico inline (puedes migrarlo a main.css si crece) -->
   <style>
-    /* CSS crítico inline - solo lo esencial */
-    .logo-font{font-family:Arial,sans-serif;letter-spacing:.1em}
-    
-    /* Loading básico */
+    .logo-font { font-family: 'Orbitron', Arial, sans-serif; letter-spacing: .1em; }
     .loading { opacity: 0.6; }
-    
-    /* Offline banner */
     .offline-banner {
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      right: 0; 
-      background: #ff4444; 
-      color: white; 
-      text-align: center; 
-      padding: 8px; 
-      z-index: 9999;
-      font-size: 14px;
-      font-weight: 500;
+      position: fixed; top: 0; left: 0; right: 0;
+      background: #ff4444; color: white; text-align: center;
+      padding: 8px; z-index: 9999; font-size: 14px; font-weight: 500;
     }
-    
-    /* Overlay y sidebar - minificado */
     #overlay{opacity:0;pointer-events:none;transition:opacity .3s}
     #sideMenuWrapper.active #overlay{opacity:.4;pointer-events:auto}
     #sideMenu{display:flex;flex-direction:column;height:100%}
     .mt-auto{margin-top:auto!important}
-
-
-
- #pendingOverlay {
-    position: fixed;
-    z-index: 9999;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.9);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 1.5em;
-    font-size: 1.3em;
-    opacity: 1;
-    transition: opacity 0.6s ease, transform 0.6s ease;
-  }
-
-  #pendingOverlay.fade-out {
-    opacity: 0;
-    pointer-events: none;
-    transform: scale(1.02);
-  }
-
-  .spinner-border {
-    width: 3rem;
-    height: 3rem;
-    transition: transform 0.6s ease, opacity 0.6s ease;
-  }
-
-  #pendingOverlay.fade-out .spinner-border {
-    transform: scale(0.5);
-    opacity: 0;
-  }
-
-  @keyframes pulse {
-    0%, 100% {
-      transform: scale(1);
+    /* Overlay carga y responsive: igual a tu código */
+    #pendingOverlay { position: fixed; z-index: 9999; inset: 0;
+      background: rgba(255,255,255,0.9); color: white; display: flex;
+      align-items: center; justify-content: center; flex-direction: column;
+      gap: 1.5em; font-size: 1.3em; opacity: 1;
+      transition: opacity 0.6s ease, transform 0.6s ease;
     }
-    50% {
-      transform: scale(1.08);
+    #pendingOverlay.fade-out { opacity: 0; pointer-events: none; transform: scale(1.02);}
+    .spinner-border { width: 3rem; height: 3rem;
+      transition: transform 0.6s ease, opacity 0.6s ease;
     }
-  }
-
-  #pendingOverlay.fade-out img {
-    transform: scale(0.5);
-    opacity: 0;
-  }
-
+    #pendingOverlay.fade-out .spinner-border { transform: scale(0.5); opacity: 0;}
+    @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    #pendingOverlay.fade-out img { transform: scale(0.5); opacity: 0; }
 
     body.ios .form-control, body.ios input, body.ios select, body.ios button {
-  font-size: 1.08em;
-  border-radius: 18px !important;
-  box-shadow: 0 2px 8px 0 rgba(80,80,160,0.07);
-}
-body.android .form-control, body.android input, body.android select, body.android button {
-  font-size: 1em;
-  border-radius: 8px !important;
-  box-shadow: 0 1px 4px 0 rgba(60,60,60,0.06);
-}
-body.ios #reservaForm, body.ios #resumenReserva {
-  background: #f8fafc;
-}
-body.android #reservaForm, body.android #resumenReserva {
-  background: #f4f6fb;
-}
-body.ios legend, body.ios label { color: #3b3b7a; }
-body.android legend, body.android label { color: #2d3748; }
-
-
+      font-size: 1.08em; border-radius: 18px !important;
+      box-shadow: 0 2px 8px 0 rgba(80,80,160,0.07);
+    }
+    body.android .form-control, body.android input, body.android select, body.android button {
+      font-size: 1em; border-radius: 8px !important;
+      box-shadow: 0 1px 4px 0 rgba(60,60,60,0.06);
+    }
+    body.ios #reservaForm, body.ios #resumenReserva { background: #f8fafc; }
+    body.android #reservaForm, body.android #resumenReserva { background: #f4f6fb; }
+    body.ios legend, body.ios label { color: #3b3b7a; }
+    body.android legend, body.android label { color: #2d3748; }
   </style>
-  
-  <script>
-  // Detecta el sistema operativo y asigna la clase al body
-  document.addEventListener('DOMContentLoaded', function() {
-    var ua = navigator.userAgent.toLowerCase();
-    var body = document.body;
-    if (/iphone|ipad|ipod|ios/.test(ua)) {
-      body.classList.add('ios');
-    } else if (/android/.test(ua)) {
-      body.classList.add('android');
-    } else {
-      body.classList.add('android'); // Por defecto Android si no se detecta iOS
-    }
-  });
-</script>
-  <!-- Fuentes se cargan cuando se necesiten -->
-  <script>
-    function loadOrbitronFont() {
-      const link = document.createElement('link');
-      link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@400&display=swap';
-      link.rel = 'stylesheet';
-      document.head.appendChild(link);
-      document.querySelectorAll('.logo-font').forEach(el => {
-        el.style.fontFamily = "'Orbitron', sans-serif";
-      });
-    }
-  </script>
+
+ 
 </head>
 
+
 <body class="bg-gray-50 text-gray-800">
+
+   <!-- Banner de notificación SIEMPRE dentro de <body> -->
+  <div id="bannerNotificacion" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999;">
+    <div style="background:#1e293b; color:white; padding:16px 24px; display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <span id="bannerNotiTitle" style="font-weight:bold;"></span>
+        <span id="bannerNotiBody" style="margin-left:12px;"></span>
+      </div>
+      <button id="cerrarBannerNoti" style="background:none; border:none; color:white; font-size:22px; margin-left:18px; cursor:pointer;">×</button>
+    </div>
+  </div>
+
   <!-- Overlay de carga para usuarios pendientes -->
   <div id="pendingOverlay" style="opacity:1;transition:opacity .4s;position:fixed;z-index:9999;inset:0;background:rgba(255,255,255,0.85);color:white;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.5em;font-size:1.3em;">
     <img src="icon-192.png" alt="NightDreams logo in a circular style, gently pulsing to indicate loading, displayed above a clean white background, no visible text, conveys a calm and welcoming atmosphere" class="mb-3" style="width:92px; height:92px; animation: pulse 1.4s infinite; transition: transform 0.6s ease, opacity 0.6s ease;">
@@ -273,6 +157,12 @@ body.android legend, body.android label { color: #2d3748; }
 
       </div>
 
+      <div id="panelBossBtnWrapper" class="p-4 hidden">
+  <button class="w-full bg-black text-white py-2 rounded mb-2" onclick="location.href='panel-boss.html'">
+    🧠 Panel Boss
+  </button>
+</div>
+
       <div class="p-4 mt-auto">
         <button id="logoutBtn" class="w-full py-2 bg-red-500 text-white rounded">Cerrar sesión</button>
       </div>
@@ -301,5 +191,24 @@ body.android legend, body.android label { color: #2d3748; }
   </button>
 </nav>
  <container class="fixed bottom-0 w-full bg-white shadow-t border-t flex justify-between px-2 pb-2 pt-2 z-40 text-xs"></container>
+ 
+ 
+ 
+ <!-- Detecta sistema operativo y asigna clase al body -->
+  <script>
+     document.addEventListener('DOMContentLoaded', function() {
+      var ua = navigator.userAgent.toLowerCase();
+      var body = document.body;
+      if (/iphone|ipad|ipod|ios/.test(ua)) {
+        body.classList.add('ios');
+      } else if (/android/.test(ua)) {
+        body.classList.add('android');
+      } else {
+        body.classList.add('android'); // Por defecto Android si no se detecta iOS
+      }
+    });
+  </script>
+
+
 </body>
 </html>

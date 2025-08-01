@@ -140,6 +140,18 @@
     border-color: #6a82fb;
   }
 </style>
+
+ <script>
+    function isInStandaloneMode() {
+      return (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true
+      );
+    }
+    if (!isInStandaloneMode()) {
+      window.location.replace('access.html');
+    }
+  </script>
   <!-- Cache busting para scripts -->
   <script>
     // Función para recargar scripts con nueva versión
@@ -726,7 +738,24 @@ window.saveClubField = async function(diaId, club, field, value) {
   }
 };
 
-// Botón opcional para notificar cambios
+// Función reutilizable para enviar notificaciones
+window.enviarNotificacion = async function({ titulo, cuerpo, tipo = '', enviadoPor = null }) {
+  try {
+    await db.collection('notificaciones').add({
+      titulo,
+      cuerpo,
+      tipo,
+      enviadoPor: enviadoPor || localStorage.getItem('nombre') || 'admin',
+      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return true;
+  } catch (err) {
+    console.error('Error al enviar notificación:', err);
+    return false;
+  }
+};
+
+// Botón opcional para notificar cambios de precio
 window.notificarCambioPrecio = async function(diaId, club) {
   try {
     const doc = await db.collection('WeekDays').doc(diaId).get();
@@ -738,15 +767,16 @@ window.notificarCambioPrecio = async function(diaId, club) {
     const msg = `📢 ${club} (${diaId})\n🕒 ${clubData.hora || '-'}\n💸 ${clubData.precio || '-'}`;
     if (!confirm(`¿Enviar notificación?\n\n${msg}`)) return;
 
-    await db.collection('notificaciones').add({
+    const ok = await window.enviarNotificacion({
       titulo: `Cambio en ${club}`,
       cuerpo: msg,
-      tipo: 'precio',
-      enviadoPor: localStorage.getItem('nombre') || 'admin',
-      creadoEn: firebase.firestore.FieldValue.serverTimestamp()
+      tipo: 'precio'
     });
-
-    alert('✅ Notificación enviada');
+    if (ok) {
+      alert('✅ Notificación enviada');
+    } else {
+      alert('Error al enviar notificación');
+    }
   } catch (err) {
     alert('Error al enviar notificación');
     console.error(err);

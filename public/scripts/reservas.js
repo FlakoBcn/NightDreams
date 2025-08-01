@@ -9,16 +9,16 @@ export async function init() {
   // Datos de usuario
   const correo = localStorage.getItem('correo');
   const uid = localStorage.getItem('uid');
-  const soyBoss = correo === 'official.nightdreams@gmail.com';
+  const isBoss = correo === 'official.nightdreams@gmail.com';
 
   // DOM
   const tituloTabla = document.getElementById('tituloTabla');
   const btnCSV = document.getElementById('csvBtn');
   const destino = document.getElementById('tablaReservas');
-    const destinoLegacy = document.getElementById('tablaReservasLegacy');
+  const destinoLegacy = document.getElementById('tablaReservasLegacy');
 
   // Título y botón CSV según usuario
-  if (soyBoss) {
+  if (isBoss) {
     tituloTabla.textContent = 'Reservas globales (Boss)';
     btnCSV.style.display = '';
     await mostrarReservasBoss(destino, btnCSV);
@@ -28,7 +28,7 @@ export async function init() {
     await mostrarReservasPromotor(uid, destino);
     await mostrarReservasLegacyPromotor(uid, destinoLegacy);
   }
-    // Refresh iconos Lucide
+  // Refresh iconos Lucide
   if (window.lucide) {
     window.lucide.createIcons();
   }
@@ -38,30 +38,16 @@ export async function init() {
 async function mostrarReservasBoss(destino, btnCSV) {
   destino.innerHTML = 'Cargando reservas…';
   try {
-    const promotoresSnap = await db.collection('reservas_por_promotor').get();
+    // Obtener todos los documentos de la colección 'reservas'
+    const reservasSnap = await db.collection('reservas').get();
     let docs = [];
     let columnasSet = new Set();
-    let solicitudesPendientesPorPromotor = {};
 
-    // Lee todas las solicitudes pendientes agrupadas por promotor
-    const solicitudesSnap = await db.collection('solicitudes_reservas')
-      .where('estado', '==', 'pendiente')
-      .get();
-
-    solicitudesSnap.forEach(doc => {
+    reservasSnap.forEach(doc => {
       const data = doc.data();
-      const promotorUid = data.promotorUid;
-      solicitudesPendientesPorPromotor[promotorUid] = true;
+      docs.push(data);
+      Object.keys(data).forEach(col => columnasSet.add(col));
     });
-
-    for (const promotorDoc of promotoresSnap.docs) {
-      const reservasSnap = await promotorDoc.ref.collection('reservas').get();
-      reservasSnap.forEach(doc => {
-        const data = doc.data();
-        docs.push(data);
-        Object.keys(data).forEach(col => columnasSet.add(col));
-      });
-    }
 
     if (docs.length === 0) {
       destino.innerHTML = '<p class="text-gray-500 text-center py-6">No hay reservas en la base de datos.</p>';
@@ -71,28 +57,24 @@ async function mostrarReservasBoss(destino, btnCSV) {
     // Prepara columnas
     const columnasPrioridad = [
       "Club", "FechaTexto", "NombreCliente", "Pax", "Precio", "Pagado",
-      "Email", "Telefono", "Promotor", "PromotorUid", "Fecha", "ReservationID", "Estado"
+      "Email", "Telefono", "Promotor", "PromotorId", "Fecha", "ReservationID", "Estado"
     ];
     const columnas = columnasPrioridad.filter(c => columnasSet.has(c))
       .concat([...columnasSet].filter(c => !columnasPrioridad.includes(c)));
 
     // Renderiza la tabla
     let html = `<div class="overflow-x-auto">
-      <table class="min-w-full text-sm text-gray-900">
+      <table class="w-full text-sm text-gray-900 rounded-xl shadow-lg bg-white">
         <thead class="bg-slate-100"><tr>
-          ${columnas.map(col => `<th class="px-3 py-2">${col}</th>`).join('')}
+          ${columnas.map(col => `<th class="px-4 py-3 font-bold text-left">${col}</th>`).join('')}
         </tr></thead>
         <tbody>`;
 
     docs.forEach(data => {
-      html += '<tr class="border-t">';
+      html += '<tr class="border-t hover:bg-slate-100">';
       columnas.forEach(col => {
         let val = data[col] ?? '';
-        // Si la columna es "PromotorUid", mostramos notificación si tiene solicitudes pendientes
-        if (col === "PromotorUid" && val && solicitudesPendientesPorPromotor[val]) {
-          val += ' <span title="Solicitud pendiente" style="color:#f59e42;font-weight:bold;font-size:1.2em;">&#9888;</span>';
-        }
-        html += `<td class="px-3 py-1 whitespace-nowrap">${val}</td>`;
+        html += `<td class="px-4 py-4 whitespace-nowrap">${val}</td>`;
       });
       html += '</tr>';
     });
@@ -129,30 +111,38 @@ async function mostrarReservasPromotor(uid, destino) {
     ];
 
     let html = `<div class="overflow-x-auto">
-      <table class="min-w-full text-sm text-gray-900">
-        <thead class="bg-slate-100"><tr>
-          ${columnas.map(col => `<th class="px-3 py-2">${col}</th>`).join('')}
-        </tr></thead>
+      <table class="w-full text-[1rem] rounded-xl shadow-lg bg-white">
+        <thead class="bg-slate-100">
+          <tr>
+            ${columnas.map(col => `<th class="px-4 py-3 font-bold text-left">${col}</th>`).join('')}
+          </tr>
+        </thead>
         <tbody>`;
 
     snap.forEach(doc => {
       const data = doc.data();
-      html += '<tr class="border-t">';
+      const estaPendienteEliminacion = data.Estado === "pendiente_eliminacion";
+
+      html += `<tr class="border-t ${estaPendienteEliminacion ? 'bg-red-50 text-gray-500' : 'hover:bg-slate-100'}">`;
       columnas.forEach(col => {
         let val = data[col] ?? '';
         if (col === "Acciones") {
-          val = `
-            <button class="text-xs bg-yellow-400 text-black px-2 py-1 rounded mr-1" onclick="openModalModificacion('${doc.id}', '${data.NombreCliente}', '${data.Pax}', '${data.Precio}')">Modificar</button>
-            <button class="text-xs bg-red-500 text-white px-2 py-1 rounded" onclick="openModalEliminacion('${doc.id}')">Eliminar</button>
-          `;
+          val = estaPendienteEliminacion
+            ? `<span class="italic text-red-400">En revisión</span>`
+            : `<button class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow transition"
+                onclick="openModalEliminacion('${doc.id}')">
+                Eliminar
+              </button>`;
         }
-        html += `<td class="px-3 py-1 whitespace-nowrap">${val}</td>`;
+        html += `<td class="px-4 py-4 whitespace-nowrap">${val}</td>`;
       });
       html += '</tr>';
     });
 
     html += '</tbody></table></div>';
     destino.innerHTML = html;
+    if (window.lucide) window.lucide.createIcons();
+
   } catch (error) {
     console.error('❌ Error al cargar reservas:', error);
     destino.innerHTML = '<p class="text-red-600 text-center py-6">Error al cargar reservas.</p>';
@@ -180,9 +170,9 @@ async function mostrarReservasLegacyPromotor(uid, destino) {
     ];
 
     let html = `<div class="overflow-x-auto">
-      <table class="min-w-full text-xs md:text-sm">
+      <table class="w-full text-xs md:text-sm rounded-xl shadow-lg">
         <thead class="bg-yellow-100 text-orange-900"><tr>
-          ${columnas.map(col => `<th class="px-3 py-2">${col}</th>`).join('')}
+          ${columnas.map(col => `<th class="px-4 py-3 font-bold text-left">${col}</th>`).join('')}
         </tr></thead>
         <tbody>`;
 
@@ -196,10 +186,10 @@ async function mostrarReservasLegacyPromotor(uid, destino) {
     });
 
     docs.forEach(data => {
-      html += '<tr class="border-t">';
+      html += '<tr class="border-t hover:bg-yellow-50">';
       columnas.forEach(col => {
         let val = data[col] ?? '';
-        html += `<td class="px-3 py-1 whitespace-nowrap">${val}</td>`;
+        html += `<td class="px-4 py-3 whitespace-nowrap">${val}</td>`;
       });
       html += '</tr>';
     });
@@ -239,20 +229,6 @@ function prepararBotonCSV(btn, data, columnas) {
 
 // =============================== MODALES Y SOLICITUDES ===============================
 
-// MODAL MODIFICACIÓN
-window.openModalModificacion = function(reservaId, nombre, pax, precio) {
-  document.getElementById('modalModificacion').classList.remove('hidden');
-  document.getElementById('modReservaId').value = reservaId;
-  document.getElementById('modNombreCliente').value = nombre;
-  document.getElementById('modPax').value = pax;
-  document.getElementById('modPrecio').value = precio;
-  document.getElementById('modMotivo').value = '';
-};
-
-window.closeModalModificacion = function() {
-  document.getElementById('modalModificacion').classList.add('hidden');
-};
-
 // MODAL ELIMINACIÓN
 window.openModalEliminacion = function(reservaId) {
   document.getElementById('modalEliminacion').classList.remove('hidden');
@@ -264,55 +240,33 @@ window.closeModalEliminacion = function() {
   document.getElementById('modalEliminacion').classList.add('hidden');
 };
 
-// ENVÍO SOLICITUD MODIFICACIÓN
-document.addEventListener('DOMContentLoaded', function () {
-  const form = document.getElementById('formModificacion');
-  if (form) {
-    form.onsubmit = async function(ev) {
-      ev.preventDefault();
-      const reservaId = document.getElementById('modReservaId').value;
-      const nombre = document.getElementById('modNombreCliente').value;
-      const pax = document.getElementById('modPax').value;
-      const precio = document.getElementById('modPrecio').value;
-      const motivo = document.getElementById('modMotivo').value;
-
-      await enviarSolicitudReserva({
-        tipo: "modificacion",
-        reservaId,
-        datos_modificados: { NombreCliente: nombre, Pax: pax, Precio: precio },
-        motivo,
-        estado: "pendiente",
-        promotorUid: localStorage.getItem('uid'),
-        timestamp: Date.now()
-      });
-
-      alert('Solicitud de modificación enviada. El Boss debe aprobarla.');
-      closeModalModificacion();
-    };
-  }
-});
-
 // ENVÍO SOLICITUD ELIMINACIÓN
 window.enviarSolicitudEliminacion = async function() {
   const reservaId = document.getElementById('elimReservaId').value;
   const motivo = document.getElementById('elimMotivo').value;
+  const uid = localStorage.getItem('uid');
 
-  await enviarSolicitudReserva({
+  // Envía la solicitud
+  const solicitud = {
     tipo: "eliminacion",
-    reservaId,
-    datos_modificados: {},
+    idReserva: reservaId,
     motivo,
     estado: "pendiente",
-    promotorUid: localStorage.getItem('uid'),
-    timestamp: Date.now()
-  });
+    promotor: uid,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  const { db } = await loadFirebase();
+  await db.collection('solicitudes_eliminacion').add(solicitud);
+
+  // Marca la reserva en Firestore (usando Estado con E mayúscula)
+  await db.collection('reservas_por_promotor').doc(uid)
+    .collection('reservas').doc(reservaId)
+    .update({ Estado: "pendiente_eliminacion" });
 
   alert('Solicitud de eliminación enviada. El Boss debe aprobarla.');
   closeModalEliminacion();
-};
 
-// Función común para guardar en Firestore
-async function enviarSolicitudReserva(solicitud) {
-  const { db } = await loadFirebase();
-  await db.collection('solicitudes_reservas').add(solicitud);
-}
+  // Refresca la tabla
+  const destino = document.getElementById('tablaReservas');
+  await mostrarReservasPromotor(uid, destino);
+};

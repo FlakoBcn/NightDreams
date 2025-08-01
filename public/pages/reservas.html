@@ -31,50 +31,29 @@
 </div>
 
 
-<!-- Modal Modificación -->
-<div id="modalModificacion" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 hidden">
-  <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
-    <h2 class="text-lg font-bold mb-4">Solicitar modificación de reserva</h2>
-    <form id="formModificacion" class="space-y-3">
-      <input type="hidden" id="modReservaId">
-      <div>
-        <label class="block font-semibold mb-1">Nuevo nombre cliente</label>
-        <input type="text" id="modNombreCliente" class="w-full border rounded px-2 py-1" required>
-      </div>
-      <div>
-        <label class="block font-semibold mb-1">Nuevo número de personas (Pax)</label>
-        <input type="number" id="modPax" class="w-full border rounded px-2 py-1" min="1" required>
-      </div>
-      <div>
-        <label class="block font-semibold mb-1">Nuevo precio (€)</label>
-        <input type="number" id="modPrecio" class="w-full border rounded px-2 py-1" min="0" required>
-      </div>
-      <div>
-        <label class="block font-semibold mb-1">Motivo (opcional)</label>
-        <textarea id="modMotivo" class="w-full border rounded px-2 py-1"></textarea>
-      </div>
-      <div class="flex justify-end gap-2 mt-4">
-        <button type="button" onclick="closeModalModificacion()" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
-        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Enviar solicitud</button>
+<!-- Modal Eliminación Reserva -->
+<div id="modalEliminacion" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-2xl p-6 shadow-xl w-full max-w-md relative animate__animated animate__fadeInDown">
+    <button onclick="closeModalEliminacion()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl font-bold bg-transparent border-none focus:outline-none">×</button>
+    <h2 class="text-xl font-semibold text-red-600 mb-4 flex items-center gap-2">
+      <i data-lucide="trash-2" class="w-6 h-6"></i>
+      Eliminar reserva
+    </h2>
+    <form onsubmit="event.preventDefault(); enviarSolicitudEliminacion();">
+      <input type="hidden" id="elimReservaId">
+      <label class="block mb-2 text-sm font-medium text-gray-700" for="elimMotivo">
+        Motivo de la eliminación <span class="text-red-500">*</span>
+      </label>
+      <textarea id="elimMotivo" required rows="3" class="form-control block w-full border border-gray-300 rounded-lg p-2 mb-4 resize-none" placeholder="Escribe el motivo…"></textarea>
+      <div class="flex justify-end gap-2 mt-2">
+        <button type="button" onclick="closeModalEliminacion()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 transition">
+          Cancelar
+        </button>
+        <button type="submit" class="bg-red-600 text-white px-5 py-2 rounded shadow hover:bg-red-700 font-semibold transition">
+          Enviar solicitud
+        </button>
       </div>
     </form>
-    <button onclick="closeModalModificacion()" class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
   </div>
 </div>
 
-<!-- Modal Eliminación -->
-<div id="modalEliminacion" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 hidden">
-  <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
-    <h2 class="text-lg font-bold mb-4">Solicitar eliminación de reserva</h2>
-    <input type="hidden" id="elimReservaId">
-    <div class="mb-3">
-      <label class="block font-semibold mb-1">Motivo (opcional)</label>
-      <textarea id="elimMotivo" class="w-full border rounded px-2 py-1"></textarea>
-    </div>
-    <div class="flex justify-end gap-2 mt-4">
-      <button type="button" onclick="closeModalEliminacion()" class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancelar</button>
-      <button type="button" onclick="enviarSolicitudEliminacion()" class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Enviar solicitud</button>
-    </div>
-    <button onclick="closeModalEliminacion()" class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
-  </div>
-</div>

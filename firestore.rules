@@ -6,16 +6,6 @@ service cloud.firestore {
       return request.auth.token.email == "official.nightdreams@gmail.com";
     }
 
-    match /{document=**} {
-      allow read, write: if isBoss();
-    }
-
-    
-
-
-    // --- Funciones de Ayuda (Helpers) ---
-    // Funciones reutilizables para mantener las reglas limpias y legibles.
-
     function isSignedIn() {
       return request.auth != null;
     }
@@ -24,112 +14,91 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Función isAdmin() definitiva:
-    // Un usuario es administrador si su documento en 'usuarios' tiene el permiso explícito.
-    // Se ha eliminado la comprobación de la colección /admin para simplificar.
     function isAdmin() {
       return isSignedIn() && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.permisos.admin == true;
     }
     
-    // El promotor es dueño de su reserva.
     function isOwner(reserva) {
       return request.auth.uid == reserva.data.PromotorUid;
     }
 
-    
+    // Acceso global de lectura para el Boss (sin escritura global)
+    match /{document=**} {
+      allow read: if isBoss();
+    }
 
-    // --- Colección de Usuarios (/usuarios) ---
+    // Usuarios
     match /usuarios/{userId} {
-
-      // LEER: Un usuario puede leer su propio perfil. Un admin puede leer cualquier perfil.
       allow read: if isSelf(userId) || isAdmin();
-
-      // CREAR: Un usuario solo puede crear su propio documento de perfil.
-      // Se valida que los campos iniciales sean los correctos para el flujo de registro.
       allow create: if isSelf(userId) &&
-                request.resource.data.keys().hasAll([
-                  'uid','nombre','correo','rol','estado','fechaRegistro','permisos'
-                ]) &&
-                request.resource.data.permisos.admin == false &&   // ⬅️  nunca admin al crear
-                request.resource.data.rol == 'promotor' &&          // ⬅️  rol fijo
-                request.resource.data.uid  == request.auth.uid &&
-                request.resource.data.estado == 'Pendiente';
-
-      // ACTUALIZAR: Un usuario puede actualizar su propio perfil (p. ej., para añadir el nombre).
-      // Un admin también puede actualizar cualquier perfil.
+        request.resource.data.keys().hasAll(['uid','nombre','correo','rol','estado','fechaRegistro','permisos']) &&
+        request.resource.data.permisos.admin == false &&
+        request.resource.data.rol == 'promotor' &&
+        request.resource.data.uid  == request.auth.uid &&
+        request.resource.data.estado == 'Pendiente';
       allow update: if isSelf(userId) || isAdmin();
-
-      // BORRAR: Solo los administradores pueden borrar perfiles de usuario.
       allow delete: if isAdmin();
     }
 
-    // --- Colección de Clubs (/clubs) ---
+    // Clubs
     match /clubs/{clubId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin(); // Solo admin crea/edita/borra clubs
+      allow write: if isAdmin();
     }
 
-    // --- Colección de Productos (/Productos) ---
-match /Productos/{productoId} {
-  // Leer: cualquier usuario autenticado puede leer productos
-  allow read: if isSignedIn();
-  // Escribir: solo admin puede crear, actualizar o borrar productos
-  allow write: if isAdmin();
-}
+    // Productos
+    match /Productos/{productoId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
 
-    // --- Colección de Días de la Semana (/WeekDays) ---
+    // WeekDays
     match /WeekDays/{day} {
       allow read: if isSignedIn();
-      allow write: if isAdmin(); // Solo admin puede modificar los días
+      allow write: if isAdmin();
     }
 
-    // --- Colecciones de Reservas ---
-
-    // /reservas (master)
+    // Reservas (master)
     match /reservas/{resId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isOwner(request.resource);
       allow update, delete: if isAdmin();
     }
 
-    // /reservas_por_dia/{dia}/reservas/{resId}
+    // Reservas por día
     match /reservas_por_dia/{dia}/reservas/{resId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isOwner(request.resource);
-      allow update, delete: if isAdmin();
       allow write: if isAdmin();
     }
 
-    // /reservas_por_promotor/{promotorId}/reservas/{resId}
+    // Reservas por promotor
     match /reservas_por_promotor/{promotorId}/reservas/{resId} {
-      // Un promotor puede leer sus propias reservas, un admin puede leer todas.
       allow read: if isSelf(promotorId) || isAdmin();
-      // Un promotor solo puede crear/modificar/borrar sus propias reservas.
-      allow write: if isSelf(promotorId);
-      allow write: if isAdmin();
+      allow write: if isSelf(promotorId) || isAdmin();
     }
 
-     // /reservas_por_promotor/{promotorId}/reservasLegacy/{resId}
+    // Reservas Legacy por promotor
     match /reservas_por_promotor/{promotorId}/reservasLegacy/{resId} {
-      // Un promotor puede leer sus propias reservas, un admin puede leer todas.
       allow read: if isSelf(promotorId) || isAdmin();
-      // Un promotor solo puede crear/modificar/borrar sus propias reservas.
-      allow write: if isSelf(promotorId);
-      allow write: if isAdmin();
+      allow write: if isSelf(promotorId) || isAdmin();
     }
 
-    // --- Otras Colecciones ---
-
-    // /solicitudes_modificacion/{idSol}
+    // Solicitudes modificación
     match /solicitudes_modificacion/{idSol} {
       allow create: if isSignedIn();
-      // El promotor objetivo o un admin pueden leer la solicitud.
-      allow read: if isSignedIn() && (isSelf(request.resource.data.targetPromotorUid) || isAdmin());
-      allow update, delete: if isAdmin();
-      allow write: if isAdmin();
+      allow read, update, delete: if isBoss();
     }
 
-    // /formulario_config/{doc}
+    // Solicitudes eliminación
+     match /solicitudes_eliminacion/{docId} {
+      allow create: if isSignedIn();
+      allow read, update: if request.auth != null
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.correo == "official.nightdreams@gmail.com";
+allow delete: if isBoss();    
+    }
+
+    // Formulario config
     match /formulario_config/{doc} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
@@ -137,12 +106,15 @@ match /Productos/{productoId} {
          
     // Colección de mesas
     match /mesas/{mesaId} {
-      // Todos los usuarios autenticados pueden LEER las mesas
-      allow read: if request.auth != null;
-      // Solo admin puede CREAR, MODIFICAR o ELIMINAR
-      allow write: if request.auth != null && request.auth.token.role == 'admin';
+      allow create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow update: if isBoss() || (isSignedIn() && resource.data.promotorUid == request.auth.uid);
+      allow delete: if isBoss();
     }
-  }
-
-
+ }
 }
+
+
+
+
+

@@ -42,11 +42,19 @@ async function getAdminTokens() {
   return [...new Set(snap.docs.map(d => d.data().tokenPush))];
 }
 
-async function sendMulticastFCM(tokens, payload) {
+async function sendMulticastFCM(tokens, data) {
   const results = await Promise.allSettled(
-    tokens.map(token => fcm.send({ ...payload, token }))
+    tokens.map(token =>
+      fcm.send({
+        token,
+        data, // ← usa sólo DATA
+        android: { priority: 'high' },
+        apns: { headers: { 'apns-priority': '10' } },
+        webpush: { headers: { Urgency: 'high' } },
+      })
+    )
   );
-
+  
   const batch = db.batch();
 
   results.forEach((r, i) => {
@@ -72,26 +80,26 @@ async function notificarAdmins(title, body, data = {}) {
     return;
   }
 
-  const successful = await sendMulticastFCM(tokens, {
-    notification: { title, body },
-    data,
-  });
+  // Combina titulo y cuerpo en datos personalizados
+  const payloadData = { title, body, ...data, type: data.type || 'admin_alert' };
+
+  const successful = await sendMulticastFCM(tokens, payloadData);
 
   console.log(`🔔 Notificaciones enviadas: ${successful}/${tokens.length}`);
 }
 
 // ──────────────────────────── CLOUD FUNCTIONS ────────────────────────────
 
-// 📝 Solicitud de Modificación
+// 📝 Solicitud de Eliminación
 export const notificarAdminSolicitud = onDocumentCreated(
-  { document: 'solicitudes_modificacion/{id}', region: 'us-central1' },
+  { document: 'solicitudes_eliminacion/{id}', region: 'us-central1' },
   async event => {
     if (!(await isFirstTime(event.id))) return;
     const data = event.data.data();
 
     await notificarAdmins(
       `📝 Solicitud ${data.idReserva || 'Nueva'}`,
-      `Promotor ${data.promotor || ''} solicita modificaciones.`,
+      `Promotor ${data.promotor || ''} solicita eliminación.`,
       {
         type: 'solicitud',
         reservaId: data.idReserva || '',
@@ -151,13 +159,16 @@ export const notificarPromotorAprobado = onDocumentUpdated(
       (await isFirstTime(event.id))
     ) {
       await fcm.send({
-        token: after.tokenPush,
-        notification: {
-          title: '🎉 ¡Cuenta aprobada!',
-          body: 'Ya puedes acceder a NightDreams.',
-        },
-        data: { type: 'aprobacion' },
-      });
+  token: after.tokenPush,
+  data: {
+    title: '🎉 ¡Cuenta aprobada!',
+    body: 'Ya puedes acceder a NightDreams.',
+    type: 'aprobacion'
+  },
+  android: { priority: 'high' },
+  apns: { headers: { 'apns-priority': '10' } },
+  webpush: { headers: { Urgency: 'high' } },
+});
       console.log(`✅ Promotor aprobado: ${after.nombre || ''}`);
     }
   }
@@ -197,7 +208,7 @@ export const limpiezaTokens = onSchedule(
   }
 );
 
-export const sendManualPush = onRequest({ region: 'us-central1' }, async (req, res) => {
+export const sendManualPush = onRequest({ region: "us-central1", cors: true }, async (req, res) => {
   const { titulo, cuerpo, tokens } = req.body;
 
   if (!titulo || !cuerpo || !Array.isArray(tokens)) {
@@ -207,10 +218,12 @@ export const sendManualPush = onRequest({ region: 'us-central1' }, async (req, r
   try {
     const messaging = getMessaging();
     const result = await messaging.sendEachForMulticast({
-      tokens,
-      notification: { title: titulo, body: cuerpo },
-      data: { type: 'manual' }
-    });
+  tokens,
+  data: { title: titulo, body: cuerpo, type: 'manual' },
+  android: { priority: 'high' },
+  apns: { headers: { 'apns-priority': '10' } },
+  webpush: { headers: { Urgency: 'high' } },
+});
 
     const enviados = result.responses.filter(r => r.success).length;
     res.json({ success: true, enviados });
@@ -219,6 +232,56 @@ export const sendManualPush = onRequest({ region: 'us-central1' }, async (req, r
     res.status(500).json({ error: 'Error interno al enviar push' });
   }
 });
+
+
+
+// 🗑️ Solicitud de Eliminación Aprobada: actualiza reservas y notifica al promotor
+export const onSolicitudEliminacionAprobada = onDocumentUpdated(
+  { document: 'solicitudes_eliminacion/{Id}', region: 'us-central1' },
+  async event => {
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    // Solo actuar si el estado cambió a "aprobado"
+    if (
+      before.estado !== 'aprobado' &&
+      after.estado === 'aprobado' &&
+      after.idReserva &&
+      after.promotor
+    ) {
+      const reservaId = after.idReserva;
+      const promotorUid = after.promotor;
+
+      // 1. Actualiza el estado de la reserva principal (si existe)
+      await db.collection('reservas').doc(reservaId).update({ estado: 'eliminada' }).catch(()=>{});
+
+      // 2. Actualiza el estado en duplicados (si existen)
+      await db.collection('reservas_por_promotor').doc(promotorUid).collection('reservas').doc(reservaId).update({ estado: 'eliminada' }).catch(()=>{});
+      await db.collection('reservas_por_promotor').doc(promotorUid).collection('reservasLegacy').doc(reservaId).update({ estado: 'eliminada' }).catch(()=>{});
+
+      // 3. Busca el tokenPush del promotor
+      const promotorDoc = await db.collection('usuarios').doc(promotorUid).get();
+      const tokenPush = promotorDoc.exists ? promotorDoc.data().tokenPush : null;
+
+      // 4. Notifica al promotor si tiene tokenPush
+      if (tokenPush) {
+        await fcm.send({
+  token: tokenPush,
+  data: {
+    title: '🗑️ Reserva eliminada',
+    body: `Tu solicitud de eliminación para la reserva ${reservaId} fue aprobada.`,
+    type: 'eliminacion_aprobada',
+    reservaId
+  },
+  android: { priority: 'high' },
+  apns: { headers: { 'apns-priority': '10' } },
+  webpush: { headers: { Urgency: 'high' } },
+});
+        console.log(`✅ Notificado promotor UID: ${promotorUid} sobre eliminación de reserva ${reservaId}`);
+      }
+    }
+  }
+);
 
 // 🧪 API Endpoint de Prueba
 export const testApi = onRequest((req, res) => {
