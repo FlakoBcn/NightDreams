@@ -46,47 +46,68 @@ export async function init() {
 }
 
 // ========== Boss: todas las reservas ==========
-async function mostrarReservasBoss(destino, btnCSV) {
+async function mostrarReservasPromotor(uid, destino) {
   destino.innerHTML = 'Cargando reservas…';
   try {
-    const reservasSnap = await db.collection('reservas').get();
-    let docs = [];
-    let columnasSet = new Set();
+    const snap = await db.collection('reservas_por_promotor')
+      .doc(uid)
+      .collection('reservas')
+      .orderBy('creadoEn', 'desc')
+      .limit(15)
+      .get();
 
-    reservasSnap.forEach(doc => {
-      const data = doc.data();
-      docs.push(data);
-      Object.keys(data).forEach(col => columnasSet.add(col));
-    });
-
-    if (docs.length === 0) {
-      destino.innerHTML = '<p class="text-gray-500 text-center py-6">No hay reservas en la base de datos.</p>';
+    if (snap.empty) {
+      destino.innerHTML = '<p class="text-gray-500 text-center py-6">No tienes reservas aún.</p>';
       return;
     }
 
-    const columnasPrioridad = [
-      "Club", "FechaTexto", "NombreCliente", "Pax", "Precio", "Pagado",
-      "Email", "Telefono", "Promotor", "PromotorId", "Fecha", "ReservationID", "Estado"
+    const columnas = [
+      "Club", "FechaTexto", "NombreCliente", "Pax", "toPay", "paidByPromotor", "Acciones"
     ];
-    const columnas = columnasPrioridad.filter(c => columnasSet.has(c))
-      .concat([...columnasSet].filter(c => !columnasPrioridad.includes(c)));
 
     let html = `
       <div class="overflow-x-auto">
-        <table class="w-full text-base text-slate-800 rounded-xl shadow-sm bg-white border border-slate-200">
+        <table class="w-full text-[1.08rem] rounded-xl shadow-sm bg-white border border-slate-200">
           <thead class="bg-slate-50">
             <tr>
-              ${columnas.map(col => `<th class="px-4 py-4 font-bold text-left tracking-wide">${col}</th>`).join('')}
+              ${columnas.map(col => {
+                let titulo = col === "FechaTexto" ? "Fecha" :
+                             col === "toPay" ? "To Pay (€)" :
+                             col === "paidByPromotor" ? "Paid (€)" :
+                             col === "NombreCliente" ? "Cliente" :
+                             col === "Acciones" ? "" : col;
+                return `<th class="px-4 py-3 font-bold text-left tracking-wide">${titulo}</th>`;
+              }).join('')}
             </tr>
           </thead>
           <tbody>
     `;
 
-    docs.forEach(data => {
+    const now = Date.now();
+
+    snap.forEach(doc => {
+      const data = doc.data();
+      const creadoEn = data.creadoEn?.toDate?.() ?? null;
+      const creadoMs = creadoEn ? creadoEn.getTime() : 0;
+      const enTiempo = now - creadoMs < 60000; // 1 minuto en ms
+
       html += `<tr class="border-t hover:bg-emerald-50 transition">`;
       columnas.forEach(col => {
         let val = data[col] ?? '';
-        html += `<td class="px-4 py-4 whitespace-nowrap">${val}</td>`;
+
+        if (col === "toPay" || col === "paidByPromotor") {
+          val = `${parseFloat(val || 0).toFixed(2)} €`;
+        }
+
+        if (col === "Acciones") {
+          if (enTiempo) {
+            val = `<button class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs shadow" onclick="anularReserva('${doc.id}')">Anular</button>`;
+          } else {
+            val = `<button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs shadow" onclick="openModalEliminacion('${doc.id}')">Eliminar</button>`;
+          }
+        }
+
+        html += `<td class="px-4 py-3 whitespace-nowrap text-base">${val}</td>`;
       });
       html += '</tr>';
     });
@@ -94,12 +115,13 @@ async function mostrarReservasBoss(destino, btnCSV) {
     html += '</tbody></table></div>';
     destino.innerHTML = html;
 
-    prepararBotonCSV(btnCSV, docs, columnas);
+    if (window.lucide) window.lucide.createIcons();
   } catch (error) {
-    console.error('❌ Error al cargar reservas:', error);
+    console.error('❌ Error al cargar reservas del promotor:', error);
     destino.innerHTML = '<p class="text-red-600 text-center py-6">Error al cargar reservas.</p>';
   }
 }
+
 
 // ========== Promotor: últimas 15 reservas ==========
 async function mostrarReservasPromotor(uid, destino) {
@@ -165,61 +187,116 @@ async function mostrarReservasPromotor(uid, destino) {
   }
 }
 
+
+window.anularReserva = async function(reservaId) {
+  const uid = localStorage.getItem('uid');
+  if (!confirm('¿Seguro que deseas anular esta reserva? Esta acción no se puede deshacer.')) return;
+
+  try {
+    const { db } = await loadFirebase();
+    await db.collection('reservas_por_promotor').doc(uid)
+      .collection('reservas').doc(reservaId)
+      .update({ Estado: "anulada" });
+
+    alert('Reserva anulada correctamente.');
+    const destino = document.getElementById('tablaReservas');
+    await mostrarReservasPromotor(uid, destino);
+  } catch (err) {
+    console.error('[Anulación] Error:', err);
+    alert('Error al anular la reserva.');
+  }
+}
+
+
 // ========== Promotor: tabla legacy, solo al desplegar ==========
-async function mostrarReservasLegacyPromotor(uid, destino) {
-  destino.innerHTML = 'Cargando reservas antiguas…';
+async function mostrarReservasPromotor(uid, destino) {
+  destino.innerHTML = 'Cargando reservas…';
   try {
     const snap = await db.collection('reservas_por_promotor')
       .doc(uid)
-      .collection('reservasLegacy')
+      .collection('reservas')
+      .orderBy('creadoEn', 'desc')
+      .limit(15)
       .get();
 
     if (snap.empty) {
-      destino.innerHTML = '<p class="text-gray-400 text-center py-6">No tienes reservas antiguas.</p>';
+      destino.innerHTML = '<p class="text-gray-500 text-center py-6">No tienes reservas aún.</p>';
       return;
     }
 
     const columnas = [
-      "Promotor", "FechaTexto", "Club", "NombreCliente", "Pax",
-      "Precio", "Pagado", "Email", "Telefono", "Fecha", "ReservationID", "Estado"
+      "Club", "FechaTexto", "NombreCliente", "Pax", "toPay", "paidByPromotor", "Acciones"
     ];
 
     let html = `
       <div class="overflow-x-auto">
-        <table class="w-full text-xs md:text-sm rounded-xl shadow-sm bg-yellow-50 border border-orange-200">
-          <thead class="bg-yellow-100 text-orange-900">
+        <table class="w-full text-[1.08rem] rounded-xl shadow-sm bg-white border border-slate-200">
+          <thead class="bg-slate-50">
             <tr>
-              ${columnas.map(col => `<th class="px-4 py-3 font-bold text-left">${col}</th>`).join('')}
+              ${columnas.map(col => {
+                const titulo = col === "FechaTexto" ? "Fecha" :
+                               col === "toPay" ? "To Pay (€)" :
+                               col === "paidByPromotor" ? "Paid (€)" :
+                               col === "NombreCliente" ? "Cliente" : col;
+                return `<th class="px-4 py-3 font-bold text-left tracking-wide">${titulo}</th>`;
+              }).join('')}
             </tr>
           </thead>
           <tbody>
     `;
 
-    const docs = [];
-    snap.forEach(doc => docs.push(doc.data()));
-    docs.sort((a, b) => {
-      const fa = a["Fecha"] ? new Date(a["Fecha"]).getTime() : 0;
-      const fb = b["Fecha"] ? new Date(b["Fecha"]).getTime() : 0;
-      return fb - fa;
-    });
+    const now = Date.now();
 
-    docs.forEach(data => {
-      html += '<tr class="border-t hover:bg-yellow-100">';
+    snap.forEach(doc => {
+      const data = doc.data();
+      const estado = (data.estado || data.Estado || '').toLowerCase();
+      const creadoEn = data.creadoEn?.toDate?.() ?? null;
+      const creadoMs = creadoEn ? creadoEn.getTime() : 0;
+      const enTiempo = now - creadoMs < 60000; // 1 min
+
+      // Color de fondo por estado
+      let rowClass = '';
+      if (estado === 'pendiente_eliminacion') {
+        rowClass = 'bg-orange-100 text-gray-700';
+      } else if (estado === 'eliminada') {
+        rowClass = 'bg-red-100 text-gray-600 line-through italic';
+      }
+
+      html += `<tr class="border-t ${rowClass}">`;
       columnas.forEach(col => {
         let val = data[col] ?? '';
-        html += `<td class="px-4 py-3 whitespace-nowrap">${val}</td>`;
+
+        if (col === 'toPay' || col === 'paidByPromotor') {
+          val = `${parseFloat(val || 0).toFixed(2)} €`;
+        }
+
+        if (col === 'Acciones') {
+          if (estado === 'eliminada') {
+            val = `<span class="text-xs text-red-400 italic">Eliminada</span>`;
+          } else if (estado === 'pendiente_eliminacion') {
+            val = `<span class="text-xs text-orange-600 italic">En revisión</span>`;
+          } else if (enTiempo) {
+            val = `<button class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs shadow" onclick="anularReserva('${doc.id}')">Anular</button>`;
+          } else {
+            val = `<button class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs shadow" onclick="openModalEliminacion('${doc.id}')">Eliminar</button>`;
+          }
+        }
+
+        html += `<td class="px-4 py-3 whitespace-nowrap text-base">${val}</td>`;
       });
       html += '</tr>';
     });
 
     html += '</tbody></table></div>';
     destino.innerHTML = html;
+
     if (window.lucide) window.lucide.createIcons();
   } catch (error) {
-    destino.innerHTML = '<p class="text-red-600 text-center py-6">Error al cargar reservas antiguas.</p>';
-    console.error(error);
+    console.error('❌ Error al cargar reservas del promotor:', error);
+    destino.innerHTML = '<p class="text-red-600 text-center py-6">Error al cargar reservas.</p>';
   }
 }
+
 
 // ========== CSV (solo Boss) ==========
 function prepararBotonCSV(btn, data, columnas) {
@@ -263,13 +340,15 @@ window.enviarSolicitudEliminacion = async function() {
   const uid = localStorage.getItem('uid');
 
   const solicitud = {
-    tipo: "eliminacion",
-    idReserva: reservaId,
-    motivo,
-    estado: "pendiente",
-    promotor: uid,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  };
+  tipo: "eliminacion",
+  idReserva: reservaId,
+  motivo,
+  estado: "pendiente",
+  promotor: localStorage.getItem('nombre'),       // nombre visible
+  promotorUid: localStorage.getItem('uid'),       // uid verdadero
+  fecha: obtenerFechaDeLaReserva(reservaId),      // opcional: si quieres mostrarla en el push
+  timestamp: firebase.firestore.FieldValue.serverTimestamp()
+};
   const { db } = await loadFirebase();
   await db.collection('solicitudes_eliminacion').add(solicitud);
 

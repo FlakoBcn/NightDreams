@@ -60,13 +60,13 @@ function isInStandaloneMode() {
 if ('serviceWorker' in navigator) {
   if (isInStandaloneMode()) {
     // SOLO registra el SW si es PWA
-    navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+    navigator.serviceWorker.getRegistration('firebase-messaging-sw.js')
       .then(existingRegistration => {
         if (existingRegistration) {
           console.log('[SW] Service Worker already registered:', existingRegistration.scope);
         } else {
           console.log('[SW] Registering new Service Worker...');
-          navigator.serviceWorker.register('/firebase-messaging-sw.js')
+          navigator.serviceWorker.register('firebase-messaging-sw.js')
             .then(r => console.log('[SW] Registered successfully:', r.scope))
             .catch(err => console.warn('[SW] Registration failed:', err));
         }
@@ -543,7 +543,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const adminButton = document.querySelector('[data-page="admin"]');
   if (adminButton) {
       adminButton.addEventListener('click', () => {
-          window.location.href = '/pages/admin.html'; // Redirige al panel de administración
+          window.location.href = 'admin.html'; // Redirige al panel de administración
       });
   }
 

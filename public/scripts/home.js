@@ -19,6 +19,8 @@ export async function init() {
   loadWeekScheduleHome();
   loadHomeConfig();
   setupHomeAnimations();
+  setupAdminDrawer(); // ← Añade esto dentro de init()
+
   
 }
 
@@ -125,6 +127,34 @@ async function loadWeekScheduleHome() {
     console.error('[Home] WeekSchedule:', e);
   }
 }
+
+async function setupAdminDrawer() {
+  const { animate } = await import("https://cdn.jsdelivr.net/npm/motion@10.13.0/+esm");
+  const panel = document.getElementById("control-panel");
+  const userRole = localStorage.getItem('rol') || '';
+
+  if (userRole !== 'admin') return;
+
+  let panelOpen = false;
+  let lastScroll = 0;
+
+  window.addEventListener("scroll", () => {
+    const currentScroll = window.scrollY;
+    if (!panelOpen && currentScroll > 30 && lastScroll < 10 && currentScroll > lastScroll) {
+      animate(panel, { transform: ["translateY(100%)", "translateY(64px)"] }, { duration: 0.4 });
+      panelOpen = true;
+    }
+    lastScroll = currentScroll;
+  });
+
+  document.addEventListener("click", (e) => {
+    if (panelOpen && !panel.contains(e.target)) {
+      animate(panel, { transform: ["translateY(64px)", "translateY(100%)"] }, { duration: 0.4 });
+      panelOpen = false;
+    }
+  });
+}
+
 export function cleanup() {
   console.log('🧹 [Home] Limpiando recursos de la página Home');
   const homeContainer = document.querySelector('#content');

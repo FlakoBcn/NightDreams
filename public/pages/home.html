@@ -1,5 +1,103 @@
-<h1 class="text-4xl font-bold mb-2">Bienvenido, <span data-user-name></span></h1>
-<p class="text-xl text-gray-600 mb-2" data-user-role></p>
+<style>
+  #control-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    z-index: 9999;
+    transform: translateY(100%);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+    padding: 1.5rem;
+  }
+
+  #panel-header {
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+  }
+
+  .panel-button {
+    display: block;
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 12px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #193477, #2850d2);
+    color: white;
+    cursor: pointer;
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+  }
+
+  .switch-label {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    border-radius: 24px;
+    transition: 0.3s;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s;
+  }
+
+  .switch input:checked + .slider {
+    background-color: #2850d2;
+  }
+
+  .switch input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+</style>
+
+  <h1 class="text-4xl font-bold mb-2">Bienvenido, <span data-user-name></span></h1>
+  <p class="text-xl text-gray-600 mb-2" data-user-role></p>
 <div id="currentDate" class="text-gray-400 italic mb-4"></div>
 
 <div class="bg-white rounded-xl shadow-lg p-4 md:p-6 mt-6">
@@ -10,5 +108,32 @@
   <div id="weekScheduleContainer" class="space-y-3">
     <!-- El contenido del horario se cargará aquí dinámicamente -->
     <div class="text-center text-gray-400 py-4">Cargando horario...</div>
+  </div>
+</div>
+
+
+<!-- Drawer deslizable Motion One -->
+<div id="control-panel">
+  <div id="panel-header">Panel de Control</div>
+
+  <button class="panel-button">📊 Ver estadísticas</button>
+  <button class="panel-button">🏷️ Gestión de clubs</button>
+  <button class="panel-button">⚙️ Configuración</button>
+  <button class="panel-button">🧪 Pruebas futuras</button>
+
+  <div class="switch-container">
+    <span class="switch-label">Notificaciones</span>
+    <label class="switch">
+      <input type="checkbox" disabled />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="switch-container">
+    <span class="switch-label">Modo oscuro</span>
+    <label class="switch">
+      <input type="checkbox" disabled />
+      <span class="slider"></span>
+    </label>
   </div>
 </div>

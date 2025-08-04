@@ -47,7 +47,7 @@ function setupListeners() {
   validarFormularioMesas();
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(()=>{});
+    navigator.serviceWorker.register('firebase-messaging-sw.js').catch(()=>{});
   }
 
   if (window.lucide) window.lucide.createIcons();

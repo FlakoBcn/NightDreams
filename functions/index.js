@@ -246,59 +246,61 @@ export const onSolicitudEliminacionAprobada = onDocumentUpdated(
     const before = event.data.before.data();
     const after = event.data.after.data();
 
-    // Detecta cambio real de estado y solo si hay resolución
+    // Verificar cambio real en el estado
     const estadoAntes = (before.estado || before.Estado || '').toLowerCase();
     const estadoDespues = (after.estado || after.Estado || '').toLowerCase();
     if (estadoAntes === estadoDespues) return;
 
-    // Solo actúa si fue atendida
-    if (['eliminada', 'rechazada'].includes(estadoDespues) && after.idReserva && after.promotor) {
-      const reservaId = after.idReserva;
-      const promotorNombre = after.promotor;
+    // Validar datos mínimos
+    if (!['eliminada', 'rechazada'].includes(estadoDespues)) return;
+    if (!after.idReserva || !after.promotorUid) return;
 
-      // Actualiza la reserva del promotor, sin importar mayúsculas en el campo 'estado'
-      const promotorSnap = await db.collection('reservas_por_promotor')
-        .get();
-      promotorSnap.forEach(promotorDoc => {
-        promotorDoc.ref.collection('reservas').doc(reservaId).update({ estado: estadoDespues }).catch(()=>{});
+    const reservaId = after.idReserva;
+    const uid = after.promotorUid;
+    const promotorNombre = after.promotor || '';
+
+    // 1. Actualizar el estado de la reserva para ese promotor
+    await db.collection('reservas_por_promotor')
+      .doc(uid)
+      .collection('reservas')
+      .doc(reservaId)
+      .update({ estado: estadoDespues })
+      .catch(() => {});
+
+    // 2. Obtener token del promotor para push
+    let tokenPush = null;
+    const userSnap = await db.collection('usuarios').doc(uid).get();
+    if (userSnap.exists) {
+      tokenPush = userSnap.data().tokenPush;
+    }
+
+    // 3. Crear mensaje de notificación
+    let mensaje = '';
+    if (estadoDespues === 'eliminada') {
+      mensaje = `Tu solicitud para eliminar la reserva del ${after.fecha || after.Fecha || ''} fue aprobada.`;
+    } else if (estadoDespues === 'rechazada') {
+      mensaje = `Tu solicitud para eliminar la reserva del ${after.fecha || after.Fecha || ''} fue rechazada.`;
+    }
+
+    // 4. Enviar notificación push
+    if (tokenPush) {
+      await fcm.send({
+        token: tokenPush,
+        data: {
+          title: 'Solicitud de eliminación',
+          body: mensaje,
+          type: 'eliminacion_atendida',
+          reservaId,
+          fecha: after.fecha || after.Fecha || ''
+        },
+        android: { priority: 'high' },
+        apns: { headers: { 'apns-priority': '10' } },
+        webpush: { headers: { Urgency: 'high' } },
       });
-
-      // Busca tokenPush por nombre del promotor
-      const userSnap = await db.collection('usuarios')
-        .where('nombre', '==', promotorNombre)
-        .limit(1).get();
-      let tokenPush = null;
-      userSnap.forEach(userDoc => {
-        tokenPush = userDoc.data().tokenPush;
-      });
-
-      // Mensaje personalizado según resultado
-      let mensaje = '';
-      if (estadoDespues === 'eliminada') {
-        mensaje = `Tu solicitud para eliminar la reserva del ${after.fecha || after.Fecha || ''} fue aprobada.`;
-      } else if (estadoDespues === 'rechazada') {
-        mensaje = `Tu solicitud para eliminar la reserva del ${after.fecha || after.Fecha || ''} fue rechazada.`;
-      }
-
-      // Notificación push
-      if (tokenPush) {
-        await fcm.send({
-          token: tokenPush,
-          data: {
-            title: 'Solicitud de eliminación',
-            body: mensaje,
-            type: 'eliminacion_atendida',
-            reservaId,
-            fecha: after.fecha || after.Fecha || ''
-          },
-          android: { priority: 'high' },
-          apns: { headers: { 'apns-priority': '10' } },
-          webpush: { headers: { Urgency: 'high' } },
-        });
-      }
     }
   }
 );
+
 
 
 
