@@ -2,8 +2,12 @@ import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/fire
 import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+
+
+
+
 
 initializeApp();
 const db = getFirestore();
@@ -242,46 +246,121 @@ export const onSolicitudEliminacionAprobada = onDocumentUpdated(
     const before = event.data.before.data();
     const after = event.data.after.data();
 
-    // Solo actuar si el estado cambió a "aprobado"
-    if (
-      before.estado !== 'aprobado' &&
-      after.estado === 'aprobado' &&
-      after.idReserva &&
-      after.promotor
-    ) {
+    // Detecta cambio real de estado y solo si hay resolución
+    const estadoAntes = (before.estado || before.Estado || '').toLowerCase();
+    const estadoDespues = (after.estado || after.Estado || '').toLowerCase();
+    if (estadoAntes === estadoDespues) return;
+
+    // Solo actúa si fue atendida
+    if (['eliminada', 'rechazada'].includes(estadoDespues) && after.idReserva && after.promotor) {
       const reservaId = after.idReserva;
-      const promotorUid = after.promotor;
+      const promotorNombre = after.promotor;
 
-      // 1. Actualiza el estado de la reserva principal (si existe)
-      await db.collection('reservas').doc(reservaId).update({ estado: 'eliminada' }).catch(()=>{});
+      // Actualiza la reserva del promotor, sin importar mayúsculas en el campo 'estado'
+      const promotorSnap = await db.collection('reservas_por_promotor')
+        .get();
+      promotorSnap.forEach(promotorDoc => {
+        promotorDoc.ref.collection('reservas').doc(reservaId).update({ estado: estadoDespues }).catch(()=>{});
+      });
 
-      // 2. Actualiza el estado en duplicados (si existen)
-      await db.collection('reservas_por_promotor').doc(promotorUid).collection('reservas').doc(reservaId).update({ estado: 'eliminada' }).catch(()=>{});
-      await db.collection('reservas_por_promotor').doc(promotorUid).collection('reservasLegacy').doc(reservaId).update({ estado: 'eliminada' }).catch(()=>{});
+      // Busca tokenPush por nombre del promotor
+      const userSnap = await db.collection('usuarios')
+        .where('nombre', '==', promotorNombre)
+        .limit(1).get();
+      let tokenPush = null;
+      userSnap.forEach(userDoc => {
+        tokenPush = userDoc.data().tokenPush;
+      });
 
-      // 3. Busca el tokenPush del promotor
-      const promotorDoc = await db.collection('usuarios').doc(promotorUid).get();
-      const tokenPush = promotorDoc.exists ? promotorDoc.data().tokenPush : null;
+      // Mensaje personalizado según resultado
+      let mensaje = '';
+      if (estadoDespues === 'eliminada') {
+        mensaje = `Tu solicitud para eliminar la reserva del ${after.fecha || after.Fecha || ''} fue aprobada.`;
+      } else if (estadoDespues === 'rechazada') {
+        mensaje = `Tu solicitud para eliminar la reserva del ${after.fecha || after.Fecha || ''} fue rechazada.`;
+      }
 
-      // 4. Notifica al promotor si tiene tokenPush
+      // Notificación push
       if (tokenPush) {
         await fcm.send({
-  token: tokenPush,
-  data: {
-    title: '🗑️ Reserva eliminada',
-    body: `Tu solicitud de eliminación para la reserva ${reservaId} fue aprobada.`,
-    type: 'eliminacion_aprobada',
-    reservaId
-  },
-  android: { priority: 'high' },
-  apns: { headers: { 'apns-priority': '10' } },
-  webpush: { headers: { Urgency: 'high' } },
-});
-        console.log(`✅ Notificado promotor UID: ${promotorUid} sobre eliminación de reserva ${reservaId}`);
+          token: tokenPush,
+          data: {
+            title: 'Solicitud de eliminación',
+            body: mensaje,
+            type: 'eliminacion_atendida',
+            reservaId,
+            fecha: after.fecha || after.Fecha || ''
+          },
+          android: { priority: 'high' },
+          apns: { headers: { 'apns-priority': '10' } },
+          webpush: { headers: { Urgency: 'high' } },
+        });
       }
     }
   }
 );
+
+
+
+// ──────────────────────────── MESAS ────────────────────────────
+
+
+export const cambiarEstadoMesa = onRequest({ region: 'us-central1', cors: true }, async (req, res) => {
+  // ---- CORS ----
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || "https://nightdreams-f90b0.web.app";
+  res.set('Access-Control-Allow-Origin', allowedOrigin);
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+  // ---- FIN CORS ----
+
+  // ACCESO SECRETO DESDE functions.config()
+  const GPT_SECRET = "!Claudio9";
+  if (!GPT_SECRET) {
+    return res.status(500).send("🔑 GPT_SECRET no está configurado en Firebase functions:config.");
+  }
+  const { mesa, cliente, estado, token } = req.body || {};
+
+  // Comprobación de token secreto
+  if (!token || token !== GPT_SECRET) {
+    return res.status(403).send("🔒 Acceso denegado.");
+  }
+
+  if (!mesa) return res.status(400).send("❌ Falta el identificador de la mesa");
+  if (!cliente) return res.status(400).send("❌ Falta el nombre del cliente");
+  if (!["confirmada", "rechazada"].includes(estado)) return res.status(400).send("❌ Estado inválido");
+
+  try {
+    const ref = db.collection("mesas").doc(mesa);
+    const doc = await ref.get();
+    if (!doc.exists) return res.status(404).send("❌ Mesa no encontrada");
+    const prev = doc.data();
+    await ref.update({
+      estado,
+      cliente,
+      mesa,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    res.status(200).send({
+      success: true,
+      mesa,
+      cliente,
+      estado,
+      estadoAnterior: prev.estado,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Error al cambiar estado de mesa:", error);
+    res.status(500).send("Error interno");
+  }
+});
+
+
+
+
 
 // 🧪 API Endpoint de Prueba
 export const testApi = onRequest((req, res) => {

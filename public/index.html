@@ -83,7 +83,7 @@
 
    <!-- Banner de notificación SIEMPRE dentro de <body> -->
   <div id="bannerNotificacion" style="display:none; position:fixed; top:0; left:0; right:0; z-index:9999;">
-    <div style="background:#1e293b; color:white; padding:16px 24px; display:flex; align-items:center; justify-content:space-between;">
+    <div style="background:#2850d2; color:white; padding:16px 24px; display:flex; align-items:center; justify-content:space-between;">
       <div>
         <span id="bannerNotiTitle" style="font-weight:bold;"></span>
         <span id="bannerNotiBody" style="margin-left:12px;"></span>
@@ -147,7 +147,7 @@
       </div>
 
       <div id="adminPanelBtnWrapper" class="p-4 hidden">
-        <button class="w-full bg-gray-800 text-white py-2 rounded mb-2" onclick="window.location.href='admin.html'">
+        <button class="w-full bg-gray-800 text-white py-2 rounded mb-2" onclick="window.location.href='/pages/admin.html'">
           ⚙️ Panel Admin
         </button>
       </div>
@@ -193,21 +193,6 @@
  <container class="fixed bottom-0 w-full bg-white shadow-t border-t flex justify-between px-2 pb-2 pt-2 z-40 text-xs"></container>
  
  
- 
- <!-- Detecta sistema operativo y asigna clase al body -->
-  <script>
-     document.addEventListener('DOMContentLoaded', function() {
-      var ua = navigator.userAgent.toLowerCase();
-      var body = document.body;
-      if (/iphone|ipad|ipod|ios/.test(ua)) {
-        body.classList.add('ios');
-      } else if (/android/.test(ua)) {
-        body.classList.add('android');
-      } else {
-        body.classList.add('android'); // Por defecto Android si no se detecta iOS
-      }
-    });
-  </script>
 
 
 </body>

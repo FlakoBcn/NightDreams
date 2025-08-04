@@ -1,35 +1,41 @@
 <!-- reservas.html -->
-<h1 class="text-xl font-semibold mb-2" id="tituloTabla">Panel de reservas</h1>
-<div id="encabezadoAcciones" class="mb-3">
-  <button id="csvBtn" class="bg-emerald-600 text-white px-3 py-2 rounded hover:bg-emerald-700">
-    Descargar CSV
-  </button>
-</div>
-<div class="max-w-7xl mx-auto px-4 pt-4 pb-24">
+<div class="w-full max-w-7xl mx-auto pt-10 pb-24 px-0 sm:px-4">
+
+  <!-- Título único -->
+  <h1 class="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
+    <i data-lucide="calendar-check" class="w-7 h-7 text-emerald-500"></i>
+    Reservas
+  </h1>
+
+  <!-- Acciones (solo Boss) -->
+  <div id="encabezadoAcciones" class="mb-3">
+    <button id="csvBtn" class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 font-semibold text-base shadow-sm transition hidden">
+      Descargar CSV
+    </button>
+  </div>
+
   <!-- Tabla de reservas NUEVAS (PWA) -->
-  <div>
-    <h3 class="text-lg font-semibold mb-2 flex items-center">
-      <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
-      Reservas Nuevas (PWA)
-    </h3>
-    <div id="tablaReservas" class="bg-white border border-blue-100 rounded-xl shadow-md overflow-x-auto p-4">
-      <p class="text-gray-500 text-center py-6">Cargando reservas…</p>
+  <div class="mb-8">
+    <div id="tablaReservas" class="w-full border border-slate-200 rounded-xl shadow-sm overflow-x-auto bg-white">
+      <p class="text-gray-500 text-center py-10">Cargando reservas…</p>
     </div>
   </div>
-  
-  <!-- Tabla de reservas LEGACY (importadas) -->
-  <div class="mt-10">
-    <h3 class="text-lg font-semibold mb-2 flex items-center text-orange-800">
-      <span class="inline-block w-2 h-2 rounded-full bg-orange-400 mr-2"></span>
+
+  <!-- Legacy (plegable/acordeón) -->
+  <div>
+    <button id="toggleLegacyBtn" class="flex items-center w-full py-4 px-4 rounded-xl border border-orange-200 bg-yellow-50 hover:bg-yellow-100 transition font-semibold text-orange-900 text-lg gap-2 mb-2 focus:outline-none">
+      <span class="inline-block w-2 h-2 rounded-full bg-orange-400"></span>
       Reservas Legacy / Antes de la PWA
       <span class="ml-2 text-xs bg-orange-100 px-2 py-1 rounded uppercase font-bold tracking-widest">Legacy</span>
-    </h3>
-    <div id="tablaReservasLegacy" class="bg-yellow-50 border border-orange-200 rounded-xl shadow-md overflow-x-auto p-4">
-      <p class="text-gray-500 text-center py-6">Cargando reservas legacy…</p>
+      <i id="legacyArrow" data-lucide="chevron-down" class="w-6 h-6 ml-auto transition-transform"></i>
+    </button>
+    <div id="tablaReservasLegacyWrapper" class="hidden">
+      <div id="tablaReservasLegacy" class="bg-yellow-50 border border-orange-200 rounded-xl shadow-md overflow-x-auto p-4 mt-2">
+        <p class="text-gray-500 text-center py-6">Haz click arriba para mostrar tus reservas legacy…</p>
+      </div>
     </div>
   </div>
 </div>
-
 
 <!-- Modal Eliminación Reserva -->
 <div id="modalEliminacion" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
@@ -56,4 +62,3 @@
     </form>
   </div>
 </div>
-

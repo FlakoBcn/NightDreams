@@ -6,39 +6,49 @@ export async function init() {
   const { db: firebaseDb } = await loadFirebase();
   db = firebaseDb;
 
-  // Datos de usuario
   const correo = localStorage.getItem('correo');
   const uid = localStorage.getItem('uid');
   const isBoss = correo === 'official.nightdreams@gmail.com';
 
-  // DOM
-  const tituloTabla = document.getElementById('tituloTabla');
   const btnCSV = document.getElementById('csvBtn');
   const destino = document.getElementById('tablaReservas');
   const destinoLegacy = document.getElementById('tablaReservasLegacy');
+  const legacyWrapper = document.getElementById('tablaReservasLegacyWrapper');
+  const toggleLegacyBtn = document.getElementById('toggleLegacyBtn');
+  const legacyArrow = document.getElementById('legacyArrow');
 
-  // Título y botón CSV según usuario
+  // Acciones CSV sólo para Boss
   if (isBoss) {
-    tituloTabla.textContent = 'Reservas globales (Boss)';
     btnCSV.style.display = '';
     await mostrarReservasBoss(destino, btnCSV);
   } else {
-    tituloTabla.textContent = 'Mis reservas';
     btnCSV.style.display = 'none';
     await mostrarReservasPromotor(uid, destino);
-    await mostrarReservasLegacyPromotor(uid, destinoLegacy);
+    // Legacy oculto por defecto, solo carga si se pulsa el acordeón
   }
-  // Refresh iconos Lucide
-  if (window.lucide) {
-    window.lucide.createIcons();
+
+  // Acordeón: Legacy solo se carga al abrir
+  if (toggleLegacyBtn) {
+    let legacyLoaded = false;
+    toggleLegacyBtn.addEventListener('click', async () => {
+      const isHidden = legacyWrapper.classList.contains('hidden');
+      if (isHidden && !legacyLoaded && !isBoss) {
+        destinoLegacy.innerHTML = '<p class="text-gray-500 text-center py-6">Cargando reservas legacy…</p>';
+        await mostrarReservasLegacyPromotor(uid, destinoLegacy);
+        legacyLoaded = true;
+      }
+      legacyWrapper.classList.toggle('hidden');
+      legacyArrow.classList.toggle('rotate-180');
+    });
   }
+
+  if (window.lucide) window.lucide.createIcons();
 }
 
-// Boss: ver TODAS las reservas y notificación de solicitudes
+// ========== Boss: todas las reservas ==========
 async function mostrarReservasBoss(destino, btnCSV) {
   destino.innerHTML = 'Cargando reservas…';
   try {
-    // Obtener todos los documentos de la colección 'reservas'
     const reservasSnap = await db.collection('reservas').get();
     let docs = [];
     let columnasSet = new Set();
@@ -54,7 +64,6 @@ async function mostrarReservasBoss(destino, btnCSV) {
       return;
     }
 
-    // Prepara columnas
     const columnasPrioridad = [
       "Club", "FechaTexto", "NombreCliente", "Pax", "Precio", "Pagado",
       "Email", "Telefono", "Promotor", "PromotorId", "Fecha", "ReservationID", "Estado"
@@ -62,16 +71,19 @@ async function mostrarReservasBoss(destino, btnCSV) {
     const columnas = columnasPrioridad.filter(c => columnasSet.has(c))
       .concat([...columnasSet].filter(c => !columnasPrioridad.includes(c)));
 
-    // Renderiza la tabla
-    let html = `<div class="overflow-x-auto">
-      <table class="w-full text-sm text-gray-900 rounded-xl shadow-lg bg-white">
-        <thead class="bg-slate-100"><tr>
-          ${columnas.map(col => `<th class="px-4 py-3 font-bold text-left">${col}</th>`).join('')}
-        </tr></thead>
-        <tbody>`;
+    let html = `
+      <div class="overflow-x-auto">
+        <table class="w-full text-base text-slate-800 rounded-xl shadow-sm bg-white border border-slate-200">
+          <thead class="bg-slate-50">
+            <tr>
+              ${columnas.map(col => `<th class="px-4 py-4 font-bold text-left tracking-wide">${col}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+    `;
 
     docs.forEach(data => {
-      html += '<tr class="border-t hover:bg-slate-100">';
+      html += `<tr class="border-t hover:bg-emerald-50 transition">`;
       columnas.forEach(col => {
         let val = data[col] ?? '';
         html += `<td class="px-4 py-4 whitespace-nowrap">${val}</td>`;
@@ -82,23 +94,22 @@ async function mostrarReservasBoss(destino, btnCSV) {
     html += '</tbody></table></div>';
     destino.innerHTML = html;
 
-    // CSV solo para Boss
     prepararBotonCSV(btnCSV, docs, columnas);
-
   } catch (error) {
     console.error('❌ Error al cargar reservas:', error);
     destino.innerHTML = '<p class="text-red-600 text-center py-6">Error al cargar reservas.</p>';
   }
 }
 
-// Promotor: ver solo sus reservas y acciones
+// ========== Promotor: últimas 15 reservas ==========
 async function mostrarReservasPromotor(uid, destino) {
   destino.innerHTML = 'Cargando reservas…';
   try {
     const snap = await db.collection('reservas_por_promotor')
       .doc(uid)
       .collection('reservas')
-      .orderBy('ReservationID')
+      .orderBy('ReservationID', 'desc')
+      .limit(15)
       .get();
 
     if (snap.empty) {
@@ -110,20 +121,21 @@ async function mostrarReservasPromotor(uid, destino) {
       "Club", "FechaTexto", "NombreCliente", "Pax", "Precio", "Pagado", "Estado", "Acciones"
     ];
 
-    let html = `<div class="overflow-x-auto">
-      <table class="w-full text-[1rem] rounded-xl shadow-lg bg-white">
-        <thead class="bg-slate-100">
-          <tr>
-            ${columnas.map(col => `<th class="px-4 py-3 font-bold text-left">${col}</th>`).join('')}
-          </tr>
-        </thead>
-        <tbody>`;
+    let html = `
+      <div class="overflow-x-auto">
+        <table class="w-full text-[1.08rem] rounded-xl shadow-sm bg-white border border-slate-200">
+          <thead class="bg-slate-50">
+            <tr>
+              ${columnas.map(col => `<th class="px-4 py-4 font-bold text-left tracking-wide">${col}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+    `;
 
     snap.forEach(doc => {
       const data = doc.data();
       const estaPendienteEliminacion = data.Estado === "pendiente_eliminacion";
-
-      html += `<tr class="border-t ${estaPendienteEliminacion ? 'bg-red-50 text-gray-500' : 'hover:bg-slate-100'}">`;
+      html += `<tr class="border-t ${estaPendienteEliminacion ? 'bg-red-50 text-gray-500' : 'hover:bg-emerald-50 transition'}">`;
       columnas.forEach(col => {
         let val = data[col] ?? '';
         if (col === "Acciones") {
@@ -134,22 +146,26 @@ async function mostrarReservasPromotor(uid, destino) {
                 Eliminar
               </button>`;
         }
-        html += `<td class="px-4 py-4 whitespace-nowrap">${val}</td>`;
+        html += `<td class="px-4 py-4 whitespace-nowrap text-base">${val}</td>`;
       });
       html += '</tr>';
     });
 
     html += '</tbody></table></div>';
+
+    if (snap.size >= 15) {
+      html = '<div class="text-xs text-gray-500 mb-2">Mostrando tus 15 reservas más recientes</div>' + html;
+    }
+
     destino.innerHTML = html;
     if (window.lucide) window.lucide.createIcons();
-
   } catch (error) {
     console.error('❌ Error al cargar reservas:', error);
     destino.innerHTML = '<p class="text-red-600 text-center py-6">Error al cargar reservas.</p>';
   }
 }
 
-// Promotor: tabla SOLO de legacy
+// ========== Promotor: tabla legacy, solo al desplegar ==========
 async function mostrarReservasLegacyPromotor(uid, destino) {
   destino.innerHTML = 'Cargando reservas antiguas…';
   try {
@@ -163,20 +179,22 @@ async function mostrarReservasLegacyPromotor(uid, destino) {
       return;
     }
 
-    // Usa SOLO columnas legacy
     const columnas = [
       "Promotor", "FechaTexto", "Club", "NombreCliente", "Pax",
       "Precio", "Pagado", "Email", "Telefono", "Fecha", "ReservationID", "Estado"
     ];
 
-    let html = `<div class="overflow-x-auto">
-      <table class="w-full text-xs md:text-sm rounded-xl shadow-lg">
-        <thead class="bg-yellow-100 text-orange-900"><tr>
-          ${columnas.map(col => `<th class="px-4 py-3 font-bold text-left">${col}</th>`).join('')}
-        </tr></thead>
-        <tbody>`;
+    let html = `
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs md:text-sm rounded-xl shadow-sm bg-yellow-50 border border-orange-200">
+          <thead class="bg-yellow-100 text-orange-900">
+            <tr>
+              ${columnas.map(col => `<th class="px-4 py-3 font-bold text-left">${col}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+    `;
 
-    // Ordenar por fecha
     const docs = [];
     snap.forEach(doc => docs.push(doc.data()));
     docs.sort((a, b) => {
@@ -186,7 +204,7 @@ async function mostrarReservasLegacyPromotor(uid, destino) {
     });
 
     docs.forEach(data => {
-      html += '<tr class="border-t hover:bg-yellow-50">';
+      html += '<tr class="border-t hover:bg-yellow-100">';
       columnas.forEach(col => {
         let val = data[col] ?? '';
         html += `<td class="px-4 py-3 whitespace-nowrap">${val}</td>`;
@@ -196,14 +214,14 @@ async function mostrarReservasLegacyPromotor(uid, destino) {
 
     html += '</tbody></table></div>';
     destino.innerHTML = html;
+    if (window.lucide) window.lucide.createIcons();
   } catch (error) {
     destino.innerHTML = '<p class="text-red-600 text-center py-6">Error al cargar reservas antiguas.</p>';
     console.error(error);
   }
 }
 
-
-// Exportar CSV (solo Boss)
+// ========== CSV (solo Boss) ==========
 function prepararBotonCSV(btn, data, columnas) {
   if (!btn) return;
   btn.onclick = () => {
@@ -227,9 +245,8 @@ function prepararBotonCSV(btn, data, columnas) {
   };
 }
 
-// =============================== MODALES Y SOLICITUDES ===============================
 
-// MODAL ELIMINACIÓN
+// ========== MODAL ELIMINACIÓN ==========
 window.openModalEliminacion = function(reservaId) {
   document.getElementById('modalEliminacion').classList.remove('hidden');
   document.getElementById('elimReservaId').value = reservaId;
@@ -240,13 +257,11 @@ window.closeModalEliminacion = function() {
   document.getElementById('modalEliminacion').classList.add('hidden');
 };
 
-// ENVÍO SOLICITUD ELIMINACIÓN
 window.enviarSolicitudEliminacion = async function() {
   const reservaId = document.getElementById('elimReservaId').value;
   const motivo = document.getElementById('elimMotivo').value;
   const uid = localStorage.getItem('uid');
 
-  // Envía la solicitud
   const solicitud = {
     tipo: "eliminacion",
     idReserva: reservaId,
@@ -258,7 +273,6 @@ window.enviarSolicitudEliminacion = async function() {
   const { db } = await loadFirebase();
   await db.collection('solicitudes_eliminacion').add(solicitud);
 
-  // Marca la reserva en Firestore (usando Estado con E mayúscula)
   await db.collection('reservas_por_promotor').doc(uid)
     .collection('reservas').doc(reservaId)
     .update({ Estado: "pendiente_eliminacion" });

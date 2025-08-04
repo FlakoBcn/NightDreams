@@ -127,7 +127,7 @@ function renderListaMesas(mesas, idLista, estado) {
 
 // Generar HTML de reserva
 function makeReservaItem(reserva, num, estado) {
-  const mensaje = `${reserva.cliente}-${reserva.pax} pax-${reserva.precio}€-${reserva.promotor}-mesa ${reserva.mesa}`;
+  const mensaje = `${reserva.cliente} - ${reserva.pax} pax - ${reserva.precio}€ - ${reserva.promotor} - mesa ${reserva.mesa}`;
 
   const acciones = estado === 'pendiente'
     ? `<button class="mesa-btn-in btn btn-success px-4 py-2 rounded-xl shadow"><i data-lucide="check-circle"></i> IN</button>
@@ -179,7 +179,6 @@ document.addEventListener('click', async (e) => {
 function copiarMensajeGrupo(msg) {
   navigator.clipboard.writeText(msg)
     .then(() => {
-      alert('📋 Mensaje copiado. Se abrirá WhatsApp Web.');
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     })
     .catch(console.error);

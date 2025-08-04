@@ -219,16 +219,15 @@
   }
 });
 
-      // Asegurarse de que Firebase Auth está listo antes de mostrar el formulario.
-      auth.onAuthStateChanged(user => {
-        // Esta función se ejecuta cuando el estado de autenticación está listo.
-        // Ahora podemos decidir si mostrar el banner PWA o el formulario de registro.
-        if (!isStandaloneMode()) {
-          showBanner();
-        } else {
-          showForm();
-        }
-      });
+      const DEV_MODE = true; // ponlo en false para producción
+
+auth.onAuthStateChanged(user => {
+  if (!isStandaloneMode() && !DEV_MODE) {
+    showBanner();
+  } else {
+    showForm();
+  }
+});
 });
 </script>
 

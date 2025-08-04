@@ -4,7 +4,7 @@
 /* ---------------------------------------------------------------------------------------- */
 
 /* ---------- 1. Cache offline (online‑only salvo /offline.html) -------------------------- */
-const CACHE = 'nd-v19.0.0';
+const CACHE = 'nd-v25.1.0';
 const OFFLINE_URL = '/offline.html';
 
 self.addEventListener('install', event => {

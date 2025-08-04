@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel – NightDreams</title>
+
+
+<style> 
+  body { background: #f8fafc; }
+    .logo-font { font-family: 'Orbitron', Arial, sans-serif; letter-spacing: .08em; }
+    .tab-btn {
+      color: #2850d2; font-weight: 600; border: none; background: none; border-bottom: 3px solid transparent;
+      padding: 0.7em 0.8em 0.5em 0.8em; font-size: 1.07em;
+      transition: color .13s, border .2s;
+    }
+
+
+    .tab-btn.active, .tab-btn:focus {
+      color: #193477;
+      border-bottom: 3px solid #2850d2;
+      background: none;
+      outline: none;
+        border-bottom-width: 4px; 
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, #193477 0%, #2850d2 90%);
+      color: #fff; border-radius: 0.6em; font-weight: 600;
+      padding: 0.48em 1.15em; font-size: 1em; border: none;
+      box-shadow: 0 2px 12px 0 rgba(35,40,70,0.07);
+      transition: background .12s;
+    }
+    .btn-primary:hover, .btn-primary:focus { background: #2850d2; color: #fff; }
+    .btn-outline {
+      border: 2px solid #193477; color: #193477; background: none;
+      border-radius: 0.6em; font-weight: 500; padding: 0.48em 1.1em;
+      font-size: 1em; box-shadow: none; transition: color .11s, background .11s;
+    }
+    .btn-outline:hover, .btn-outline:focus { background: #2850d2; color: #fff; }
+    .table-admin {
+      width: 100%; border-collapse: collapse; font-size: 1em;
+      border-radius: 1em; overflow: hidden;
+    }
+    .table-admin th, .table-admin td {
+      border: 1px solid #e5e7eb; padding: 0.8em 0.7em; background: #fff; font-size: 1em;
+    }
+    .table-admin th {
+      background: #193477; color: #fff; font-weight: 700; text-align: left;
+      letter-spacing: 0.03em;
+    }
+    .table-admin tr:nth-child(even) td { background: #f6f9fc; }
+    .input-td {
+      border: 1px solid #c6d2ef; background: #f0f4ff; border-radius: 0.5em;
+      padding: 0.20em 0.6em; font-size: 1em; width: 100%;
+      transition: border .12s;
+    }
+    .input-td:focus { border-color: #2850d2; outline: none; }
+    .switch { accent-color: #2850d2; width: 1.2em; height: 1.2em; }
+    @media (max-width: 800px) {
+      .admin-header { flex-direction: column; align-items: flex-start; }
+      .admin-header .gap-3 { gap: 0.8rem !important; }
+      .admin-header img { margin-bottom: 0.6rem; }
+      nav.flex.gap-3 { flex-wrap: wrap; }
+      .tab-btn { font-size: 1em; padding-left: 0.6em; padding-right: 0.6em; }
+      .table-admin th, .table-admin td { font-size: 0.97em; }
+    }
+    @media (max-width: 540px) {
+      .p-5 { padding: 1rem !important; }
+      .admin-header { padding-left: 1rem !important; padding-right: 1rem !important; }
+      .table-admin th, .table-admin td { padding: 0.6em 0.25em; }
+      .modal-box { padding: 1.1em 0.6em; }
+    }
+    .modal-bg {
+      position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(36,46,97,0.15);
+      display: flex; align-items: center; justify-content: center; z-index: 50;
+    }
+    .modal-box {
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      background: #fff; border-radius: 1.2em; box-shadow: 0 4px 24px 0 rgba(45,80,200,0.11);
+      min-width: 270px; max-width: 97vw; padding: 2em 1.4em; font-size: 1.05em; color: #2850d2;
+    }
+    .modal-close { float: right; color: #a9a9a9; font-size: 1.2em; background: none; border: none; cursor: pointer; }
+  
+  
+  .btn-primary, .btn-outline, .tab-btn {
+  transition: all 0.2s ease;
+}
+
+.btn-primary:active, .btn-outline:active {
+  transform: scale(0.95);
+}
+
+.overflow-x-auto::-webkit-scrollbar { height: 4px; }
+.overflow-x-auto::-webkit-scrollbar-track { background: #eef2fb; }
+.overflow-x-auto::-webkit-scrollbar-thumb { background: #2850d2; border-radius: 2px; }
+
+  </style>
+</head>
+
+<body>
+ <header class="admin-header flex justify-between items-center gap-3 px-5 py-4 bg-white shadow-md border-b">
+    <div class="flex items-center gap-3">
+      <img src="icon-192.png" class="w-11 h-11 rounded-full" alt="NightDreams" />
+      <span class="logo-font text-xl font-bold text-[#193477]">NightDreams</span>
+      <span class="ml-3 text-gray-400 font-semibold">Admin Panel</span>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="window.location='index.html'" class="btn-outline"><i data-lucide='arrow-left'></i> Volver</button>
+    </div>
+  </header>
+  <nav class="flex gap-3 px-4 py-3 border-b bg-[#f8fafc] sticky top-0 z-30">
+    <button id="tab-schedule" class="tab-btn active" type="button"><i data-lucide="calendar"></i> Week Schedule</button>
+    <button id="tab-notif" class="tab-btn" type="button"><i data-lucide="bell"></i> Notificaciones</button>
+    <button id="tab-catalogo" class="tab-btn" type="button"><i data-lucide="package"></i> Catálogo</button>
+    <button id="tab-usuarios" class="tab-btn" type="button"><i data-lucide="users"></i> Usuarios</button>
+  </nav>
+  <main class="p-5" id="admin-content"></main>
+  <div id="admin-modal" style="display:none"></div>
+
+
+
+</body>
+</html>

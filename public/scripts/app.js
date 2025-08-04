@@ -1,6 +1,6 @@
 ﻿/*─────────────────────────────────────────────────────────────*/
-/* NightDreams – App ULTRALIGERA v15.1                         */
-/* Zero‑preload – Firebase lazy                                */
+/* NightDreams – App ULTRALIGERA                        */
+
 /*─────────────────────────────────────────────────────────────*/
 console.time('[ND] startup');
 
@@ -458,10 +458,7 @@ function mostrarBannerNotificacion(title, body) {
   }, 5000);
 }
 
-function cerrarBannerNotificacion() {
-  document.getElementById('bannerNotificacion').style.display = 'none';
-}
-document.getElementById('cerrarBannerNoti').onclick = cerrarBannerNotificacion;
+
 
 async function initMessaging() {
   if (!messaging) return;
@@ -541,5 +538,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initializeMessaging();
   await loadInitialPage();
   setupPeriodicVerification();
+
+  // Redirección del botón Admin
+  const adminButton = document.querySelector('[data-page="admin"]');
+  if (adminButton) {
+      adminButton.addEventListener('click', () => {
+          window.location.href = '/pages/admin.html'; // Redirige al panel de administración
+      });
+  }
+
   console.timeEnd('[ND] startup');
 });

@@ -8,11 +8,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    body { background: #f8f9fa; }
-    .logo-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.1em; font-weight: 500; }
-    .shadow-box { background: white; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); padding: 24px; margin-top: 32px; }
-    .table th, .table td { vertical-align: middle; }
-    pre { margin-bottom: 0; font-size: 0.9em; }
+  body{background:#000;color:#fff;font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;}
+.logo-font{color:#fff;}
+.shadow-box{background:#111;border-radius:16px;box-shadow:0 4px 18px rgba(255,255,255,.06);}
+.table-dark thead th{background:#222;border:0;font-weight:600;}
+.table-dark td, .table-dark th{border-color:#333;color:#eee;}
+.btn, .toast{border-radius:12px;}
+.btn-outline-dark{border-color:#555;color:#ccc;}
+.btn-outline-dark:hover{background:#222;color:#fff;}
+.toast .btn-close{filter:invert(1);}
+
   </style>
 </head>
 <body>
@@ -85,94 +90,58 @@
     // ─────────────────────────────
     // 🔥 MAGIA: renderiza cualquier colección
     async function cargarSolicitudesEliminacion() {
-      const cont = document.getElementById('tablaSolicitudes');
-      try {
-        console.log('[LOG] Iniciando carga de solicitudes de eliminación...');
-        const snap = await db.collection('solicitudes_eliminacion').orderBy('timestamp', 'desc').get();
-        console.log(`[LOG] Total solicitudes encontradas: ${snap.size}`);
-        if (snap.empty) {
-          cont.innerHTML = '<p class="text-muted text-center">No hay solicitudes pendientes.</p>';
-          console.log('[LOG] No hay solicitudes pendientes.');
-          return;
-        }
-        // Colecta todas las claves posibles de todos los docs
-        const allFields = new Set();
-        const docs = [];
-        snap.forEach(doc => {
-          const data = doc.data();
-          data._docId = doc.id; // id real del doc
-          docs.push(data);
-          Object.keys(data).forEach(k => allFields.add(k));
-        });
-        allFields.add('_docId'); // añade el id como columna extra
-        console.log('[LOG] Campos detectados en documentos:', [...allFields]);
-        console.log('[LOG] Documentos:', docs);
+  const cont = document.getElementById('tablaSolicitudes');
+  try {
+    const snap = await db.collection('solicitudes_eliminacion')
+                         .orderBy('timestamp','desc').get();
+    if (snap.empty) return cont.innerHTML=
+      '<p class="text-muted text-center">Sin solicitudes.</p>';
 
-        // Cabecera dinámica
-        let html = `
-          <div class="overflow-x-auto">
-            <table class="table table-bordered">
-              <thead class="table-light">
-                <tr>
-                  ${[...allFields].map(f => `<th>${f}</th>`).join('')}
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-        `;
+    // Campos que SI mostraremos
+    const VISIBLE = ['idReserva','promotor','estado','timestamp'];
 
-        docs.forEach((d, idx) => {
-          html += '<tr>';
-          [...allFields].forEach(f => {
-            let val = d[f];
-            // Detecta y pinta timestamp Firestore
-            if (val && typeof val === 'object' && val.seconds && val.nanoseconds !== undefined) {
-              val = new Date(val.seconds * 1000).toLocaleString();
-            }
-            // Si es objeto o array
-            else if (typeof val === 'object' && val !== null) {
-              val = `<pre style="white-space: pre-wrap;">${JSON.stringify(val)}</pre>`;
-            }
-            html += `<td>${val !== undefined ? val : '-'}</td>`;
-          });
-          html += `<td>
-            <button class="btn btn-sm btn-success me-1" onclick="actualizarSolicitud('${d._docId}', 'aprobado')">✔️</button>
-            <button class="btn btn-sm btn-danger" onclick="actualizarSolicitud('${d._docId}', 'rechazado')">✖️</button>
-          </td>`;
-          html += '</tr>';
-        });
+    let html = `
+      <div class="table-responsive">
+        <table class="table table-dark table-striped align-middle">
+          <thead><tr>${VISIBLE.map(f=>`<th>${f}</th>`).join('')}<th></th></tr></thead><tbody>`;
 
-        html += `
-              </tbody>
-            </table>
-          </div>
-        `;
+    snap.forEach(doc=>{
+      const d=doc.data();
+      html += `<tr>
+        <td>${d.idReserva||'-'}</td>
+        <td>${d.promotor||'-'}</td>
+        <td>${d.estado||'-'}</td>
+        <td>${d.timestamp?new Date(d.timestamp.seconds*1e3).toLocaleString():'-'}</td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-success me-1" onclick="actualizarSolicitud('${doc.id}','aprobado')">✔︎</button>
+          <button class="btn btn-sm btn-danger" onclick="actualizarSolicitud('${doc.id}','rechazado')">✖︎</button>
+        </td>
+      </tr>`;
+    });
 
-        cont.innerHTML = html;
-        console.log('[LOG] Tabla renderizada correctamente.');
+    cont.innerHTML = html + '</tbody></table></div>';
+  } catch (e) {
+    console.error(e);
+    cont.innerHTML = '<div class="text-danger text-center">❌ Error cargando.</div>';
+  }
+}
 
-      } catch (error) {
-        cont.innerHTML = '<div class="text-danger text-center">❌ Error al cargar solicitudes.</div>';
-        console.error('[ERROR] Error al cargar solicitudes:', error);
-      }
-    }
 
     // Función global (necesario para los botones)
-    async function actualizarSolicitud(docId, estado) {
-      try {
-        console.log(`[LOG] Actualizando solicitud ${docId} a estado: ${estado}`);
-        await db.collection('solicitudes_eliminacion').doc(docId).update({
-          estado: estado,
-          fechaAtendida: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        console.log(`[LOG] Solicitud ${docId} actualizada correctamente.`);
-        showToast('✅ Solicitud actualizada correctamente.', 'success');
-        cargarSolicitudesEliminacion();
-      } catch (error) {
-        console.error(`[ERROR] Error al actualizar solicitud ${docId}:`, error);
-        showToast('❌ Error al actualizar la solicitud.', 'danger');
-      }
-    }
+    async function actualizarSolicitud(docId, nuevoEstado) {
+  try {
+    await db.collection('solicitudes_eliminacion').doc(docId).update({
+      estado: nuevoEstado,
+      atendidoEn: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast('✅ Solicitud actualizada correctamente.', 'success');
+    cargarSolicitudesEliminacion();
+  } catch (error) {
+    console.error(`[ERROR] Error al actualizar solicitud ${docId}:`, error);
+    showToast('❌ Error al actualizar la solicitud.', 'danger');
+  }
+}
+
 
     function showToast(message, type = 'success') {
       const toastEl = document.getElementById('mainToast');
